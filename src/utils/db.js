@@ -56,7 +56,10 @@ export async function getDB() {
 export async function query(sql, params = []) {
   const { conn } = await getDB()
   const stmt = await conn.prepare(sql)
-  const result = await stmt.query(...params)
-  await stmt.close()
-  return result.toArray().map(row => row.toJSON())
+  try {
+    const result = await stmt.query(...params)
+    return result.toArray().map(row => row.toJSON())
+  } finally {
+    await stmt.close()
+  }
 }
