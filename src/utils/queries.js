@@ -54,7 +54,7 @@ export function buildMonthlyPriceQuery(filters = {}) {
     SELECT
       strftime(sale_date, '%Y-%m')            AS month,
       MEDIAN(price_aed)                        AS median_price,
-      COUNT(*)                                 AS tx_count
+      CAST(COUNT(*) AS INTEGER)                AS tx_count
     FROM sales
     ${where}
     ${priceFilter}
@@ -74,7 +74,7 @@ export function buildPricePerSqmQuery(filters = {}) {
     SELECT
       strftime(sale_date, '%Y-%m')            AS month,
       MEDIAN(rate_per_sqm)                     AS median_rate,
-      COUNT(*)                                 AS tx_count
+      CAST(COUNT(*) AS INTEGER)                AS tx_count
     FROM sales
     ${where}
     ${rateFilter}
@@ -92,7 +92,7 @@ export function buildVolumeQuery(filters = {}) {
   const sql = `
     SELECT
       strftime(sale_date, '%Y-%m')            AS month,
-      COUNT(*)                                 AS tx_count
+      CAST(COUNT(*) AS INTEGER)                AS tx_count
     FROM sales
     ${where}
     GROUP BY month
@@ -120,7 +120,7 @@ export function buildProjectComparisonQuery({ projectNames = [], dateFrom, dateT
       strftime(sale_date, '%Y-%m')   AS month,
       project_name,
       MEDIAN(price_aed)               AS median_price,
-      COUNT(*)                        AS tx_count
+      CAST(COUNT(*) AS INTEGER)       AS tx_count
     FROM sales
     WHERE ${conditions.join(' AND ')}
     GROUP BY month, project_name

@@ -12,10 +12,10 @@ export function useAppData(ready) {
       .then(rows => {
         const row = rows[0]
         setMeta({
-          districts: row.districts ?? [],
-          propertyTypes: row.property_types ?? [],
-          layouts: row.layouts ?? [],
-          projects: row.projects ?? [],
+          districts: Array.from(row.districts ?? []),
+          propertyTypes: Array.from(row.property_types ?? []),
+          layouts: Array.from(row.layouts ?? []),
+          projects: Array.from(row.projects ?? []),
           minDate: row.min_date,
           maxDate: row.max_date,
           minPrice: row.min_price,
