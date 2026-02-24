@@ -20,10 +20,11 @@ export async function getDB() {
 
   const conn = await db.connect()
 
-  // Register the CSV file from public folder
+  // Register the CSV file — use absolute URL so DuckDB's web worker can resolve it
+  const csvUrl = new URL('/data/abu_dhabi_sales.csv', window.location.origin).href
   await db.registerFileURL(
     'sales.csv',
-    '/data/abu_dhabi_sales.csv',
+    csvUrl,
     duckdb.DuckDBDataProtocol.HTTP,
     false
   )
