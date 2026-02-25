@@ -81,7 +81,7 @@ describe('buildDistrictComparisonQuery', () => {
     expect(sql).toContain('MEDIAN(price_aed)')
     expect(params).toContain('Yas Island')
     expect(params).toContain('Al Reem Island')
-    expect(params).toContain('2024-01')
+    expect(params).toContain('2024-01-01')
   })
 })
 

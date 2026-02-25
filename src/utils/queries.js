@@ -1,4 +1,26 @@
 /**
+ * Normalise a date value that may arrive as YYYY-MM (from Claude's intent)
+ * into a full YYYY-MM-DD string that DuckDB can parse as a DATE.
+ * Full dates (YYYY-MM-DD) are returned unchanged.
+ *
+ *   normDateStart("2019-01")  → "2019-01-01"   (first day of month)
+ *   normDateEnd("2024-02")    → "2024-02-29"   (last day, leap-year aware)
+ *   normDateStart("2022-01-01") → "2022-01-01" (pass-through)
+ */
+function normDateStart(s) {
+  if (!s || /^\d{4}-\d{2}-\d{2}$/.test(s)) return s
+  return `${s}-01`
+}
+function normDateEnd(s) {
+  if (!s || /^\d{4}-\d{2}-\d{2}$/.test(s)) return s
+  const [y, m] = s.split('-').map(Number)
+  // JS Date months are 0-based: new Date(y, m, 0) = last day of the m-th
+  // calendar month (day 0 of the next JS month rolls back one day).
+  const lastDay = new Date(y, m, 0).getDate()
+  return `${s}-${String(lastDay).padStart(2, '0')}`
+}
+
+/**
  * Build a parameterised WHERE clause from filter state.
  * Returns { where: string, params: any[] }
  * where = '' if no filters, otherwise 'WHERE ...'
@@ -9,8 +31,8 @@ export function buildWhereClause(filters = {}) {
 
   const { dateFrom, dateTo, districts, propertyTypes, layouts, saleTypes, saleSequences, priceMin, priceMax } = filters
 
-  if (dateFrom) { conditions.push('sale_date >= ?'); params.push(dateFrom) }
-  if (dateTo)   { conditions.push('sale_date <= ?'); params.push(dateTo) }
+  if (dateFrom) { conditions.push('sale_date >= ?'); params.push(normDateStart(dateFrom)) }
+  if (dateTo)   { conditions.push('sale_date <= ?'); params.push(normDateEnd(dateTo)) }
 
   if (districts?.length) {
     conditions.push(`district IN (${districts.map(() => '?').join(',')})`)
@@ -110,8 +132,8 @@ export function buildProjectComparisonQuery({ projectNames = [], dateFrom, dateT
   if (!projectNames.length) return { sql: '', params: [] }
   const conditions = []
   const params = []
-  if (dateFrom) { conditions.push('sale_date >= ?'); params.push(dateFrom) }
-  if (dateTo)   { conditions.push('sale_date <= ?'); params.push(dateTo) }
+  if (dateFrom) { conditions.push('sale_date >= ?'); params.push(normDateStart(dateFrom)) }
+  if (dateTo)   { conditions.push('sale_date <= ?'); params.push(normDateEnd(dateTo)) }
   conditions.push(`project_name IN (${projectNames.map(() => '?').join(',')})`)
   params.push(...projectNames)
   conditions.push('price_aed > 0')
@@ -153,8 +175,8 @@ export function buildDistrictComparisonQuery({ districts = [], dateFrom, dateTo 
   if (!districts.length) return { sql: '', params: [] }
   const conditions = []
   const params = []
-  if (dateFrom) { conditions.push('sale_date >= ?'); params.push(dateFrom) }
-  if (dateTo)   { conditions.push('sale_date <= ?'); params.push(dateTo) }
+  if (dateFrom) { conditions.push('sale_date >= ?'); params.push(normDateStart(dateFrom)) }
+  if (dateTo)   { conditions.push('sale_date <= ?'); params.push(normDateEnd(dateTo)) }
   conditions.push(`district IN (${districts.map(() => '?').join(',')})`)
   params.push(...districts)
   conditions.push('price_aed > 0')
@@ -180,8 +202,8 @@ export function buildLayoutComparisonQuery({ layouts = [], districts = [], proje
   if (!layouts.length) return { sql: '', params: [] }
   const conditions = []
   const params = []
-  if (dateFrom) { conditions.push('sale_date >= ?'); params.push(dateFrom) }
-  if (dateTo)   { conditions.push('sale_date <= ?'); params.push(dateTo) }
+  if (dateFrom) { conditions.push('sale_date >= ?'); params.push(normDateStart(dateFrom)) }
+  if (dateTo)   { conditions.push('sale_date <= ?'); params.push(normDateEnd(dateTo)) }
   if (districts.length) {
     conditions.push(`district IN (${districts.map(() => '?').join(',')})`)
     params.push(...districts)
