@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { encodePost, decodePost } from './deeplink'
+import { encodePost, decodePost, buildShareUrl, parseShareUrl } from './deeplink'
 
 const SAMPLE_POST = {
   id: 'abc123',
@@ -53,5 +53,66 @@ describe('encodePost / decodePost', () => {
   it('returns null for empty string', () => {
     expect(decodePost('')).toBeNull()
     expect(decodePost(null)).toBeNull()
+  })
+
+  it('returns null for undefined', () => {
+    expect(decodePost(undefined)).toBeNull()
+  })
+})
+
+describe('buildShareUrl', () => {
+  it('builds a URL with post id and encoded data params', () => {
+    const post = {
+      id: 'abc123',
+      createdAt: 1700000000000,
+      prompt: 'test prompt',
+      title: 'Test',
+      analysisText: 'Some text here for compression to work properly on this data.',
+      intent: { queryType: 'price_trend', filters: {}, chartType: 'line' },
+      chartData: [{ month: '2024-01', median_price: 2000000 }],
+      chartKeys: [],
+    }
+    const url = buildShareUrl(post)
+    expect(url).toContain('?post=abc123')
+    expect(url).toContain('&d=')
+    expect(url).toMatch(/^https?:\/\//)
+  })
+
+  it('throws if post has no id', () => {
+    expect(() => buildShareUrl({ title: 'no id' })).toThrow('post must have an id')
+  })
+})
+
+describe('parseShareUrl', () => {
+  it('returns postId and decoded post from URL search params', () => {
+    const post = {
+      id: 'xyz789',
+      createdAt: 1700000000000,
+      prompt: 'another prompt',
+      title: 'Title',
+      analysisText: 'Analysis text with enough content to compress well.',
+      intent: { queryType: 'volume_trend', filters: {}, chartType: 'bar' },
+      chartData: [],
+      chartKeys: [],
+    }
+    const encoded = encodePost(post)
+    // Set window.location.search directly via jsdom
+    Object.defineProperty(window, 'location', {
+      writable: true,
+      value: { ...window.location, search: `?post=xyz789&d=${encoded}` },
+    })
+    const { postId, post: decoded } = parseShareUrl()
+    expect(postId).toBe('xyz789')
+    expect(decoded).toEqual(post)
+  })
+
+  it('returns null post when no d param present', () => {
+    Object.defineProperty(window, 'location', {
+      writable: true,
+      value: { ...window.location, search: '?post=abc123' },
+    })
+    const { postId, post } = parseShareUrl()
+    expect(postId).toBe('abc123')
+    expect(post).toBeNull()
   })
 })

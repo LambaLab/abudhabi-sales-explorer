@@ -5,6 +5,7 @@ import LZString from 'lz-string'
  * Example: ?post=abc123&d=<encodePost(post)>
  */
 export function encodePost(post) {
+  if (!post) return ''
   return LZString.compressToEncodedURIComponent(JSON.stringify(post))
 }
 
@@ -27,6 +28,7 @@ export function decodePost(encoded) {
  * Encodes the full post in the URL so it works on any device without a backend.
  */
 export function buildShareUrl(post) {
+  if (!post?.id) throw new Error('buildShareUrl: post must have an id')
   const base = window.location.origin + window.location.pathname
   const params = new URLSearchParams({ post: post.id, d: encodePost(post) })
   return `${base}?${params.toString()}`
