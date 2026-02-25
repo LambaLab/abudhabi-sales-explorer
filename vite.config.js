@@ -9,11 +9,17 @@ import { resolve } from 'path'
 // Vite's loadEnv returns a plain object but does NOT mutate process.env, which
 // means the module-level `new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })`
 // in api/analyze.js and api/explain.js would see undefined without this step.
+//
+// IMPORTANT: use import.meta.url (the vite.config.js location) NOT process.cwd(),
+// because the preview/CLI tool may launch Vite from a different working directory
+// (e.g. the Claude Code workspace root), making process.cwd() wrong.
+const PROJECT_ROOT = new URL('.', import.meta.url).pathname
+
 function loadEnvIntoProcess() {
   const files = ['.env.local', '.env']
   for (const file of files) {
     try {
-      const content = readFileSync(resolve(process.cwd(), file), 'utf8')
+      const content = readFileSync(resolve(PROJECT_ROOT, file), 'utf8')
       for (const line of content.split('\n')) {
         const trimmed = line.trim()
         if (!trimmed || trimmed.startsWith('#')) continue
@@ -27,10 +33,8 @@ function loadEnvIntoProcess() {
              (val.startsWith("'") && val.endsWith("'")))) {
           val = val.slice(1, -1)
         }
-        // .env.local takes priority — don't overwrite if already set
-        if (!(key in process.env)) {
-          process.env[key] = val
-        }
+        // .env.local values always win — overwrite any stale shell env var
+        process.env[key] = val
       }
     } catch { /* file not found – skip */ }
   }
