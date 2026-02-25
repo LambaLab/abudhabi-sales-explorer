@@ -1,87 +1,92 @@
-import { useState } from 'react'
-import { useDuckDB } from './hooks/useDuckDB'
-import { useAppData } from './hooks/useAppData'
-import { useFilters } from './hooks/useFilters'
-import { useChartData } from './hooks/useChartData'
-import { Sidebar } from './components/Sidebar'
-import { DateRangePicker } from './components/DateRangePicker'
-import { ProjectSearch } from './components/ProjectSearch'
-import { MedianPriceChart } from './components/charts/MedianPriceChart'
-import { PricePerSqmChart } from './components/charts/PricePerSqmChart'
-import { VolumeChart } from './components/charts/VolumeChart'
-import { ProjectComparisonChart } from './components/charts/ProjectComparisonChart'
+import { useEffect } from 'react'
+import { useDuckDB }    from './hooks/useDuckDB'
+import { useAppData }   from './hooks/useAppData'
+import { useAnalysis }  from './hooks/useAnalysis'
+import { usePostStore } from './hooks/usePostStore'
+import { ChatInput }    from './components/ChatInput'
+import { SmartTopics }  from './components/SmartTopics'
+import { PostFeed }     from './components/PostFeed'
+import { PostCard }     from './components/PostCard'
+import { parseShareUrl } from './utils/deeplink'
 
 export default function App() {
   const { ready, error: dbError } = useDuckDB()
-  const { meta, error: metaError } = useAppData(ready)
-  const { filters, update, reset } = useFilters()
-  const [selectedProjects, setSelectedProjects] = useState([])
-  const { priceData, sqmData, volumeData, comparisonData, loading } = useChartData(filters, selectedProjects, ready)
+  const { meta }                  = useAppData(ready)
+  const { posts, addPost, removePost, getPost } = usePostStore()
+  const { analyze, status, error: analysisError, pendingPost } = useAnalysis(meta)
 
-  const error = dbError || metaError
+  const isLoading = ['analyzing', 'querying', 'explaining'].includes(status)
 
-  if (error) {
+  // Handle deeplink: if URL has ?post=... show that single post
+  const { postId, post: urlPost } = parseShareUrl()
+  const deeplinkPost = postId ? (getPost(postId) ?? urlPost) : null
+
+  // If we landed on a deeplink and the post isn't in localStorage yet, save it
+  useEffect(() => {
+    if (urlPost && !getPost(urlPost.id)) {
+      addPost(urlPost)
+    }
+  }, []) // run once on mount
+
+  // Deeplink view: show single post
+  if (deeplinkPost) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="text-red-400 text-center">
-          <p className="text-xl font-bold mb-2">Failed to load data</p>
-          <p className="text-sm opacity-70">{error}</p>
-        </div>
-      </div>
-    )
-  }
-
-  if (!ready || !meta) {
-    return (
-      <div className="flex flex-col items-center justify-center h-screen gap-4">
-        <div className="w-12 h-12 border-4 border-accent border-t-transparent rounded-full animate-spin" />
-        <p className="text-slate-400 text-sm">Loading {(104848).toLocaleString()}+ records…</p>
-        <p className="text-slate-600 text-xs">This takes ~10s on first visit, then it's instant</p>
-      </div>
-    )
-  }
-
-  return (
-    <div className="flex flex-col h-screen overflow-hidden">
-      {/* Top bar */}
-      <header className="flex items-center justify-between px-6 py-3 bg-brand border-b border-slate-700 shrink-0 gap-4">
-        <h1 className="text-white font-semibold text-lg tracking-tight shrink-0">
-          Abu Dhabi Sales Explorer
-        </h1>
-        <DateRangePicker meta={meta} filters={filters} update={update} />
-        {loading && (
-          <div className="w-4 h-4 border-2 border-accent border-t-transparent rounded-full animate-spin shrink-0" />
-        )}
-      </header>
-
-      <div className="flex flex-1 overflow-hidden">
-        {/* Sidebar */}
-        <aside className="w-64 shrink-0 bg-brand border-r border-slate-700 overflow-y-auto">
-          <Sidebar meta={meta} filters={filters} update={update} reset={reset} />
-          <div className="px-4 pb-4">
-            <ProjectSearch
-              projects={meta.projects}
-              selected={selectedProjects}
-              onChange={setSelectedProjects}
-            />
+      <div className="min-h-screen bg-[#0f172a] text-slate-100">
+        <header className="border-b border-slate-800 px-6 py-4">
+          <div className="mx-auto max-w-2xl flex items-center justify-between">
+            <a href="/" className="text-sm text-slate-400 hover:text-white transition-colors flex items-center gap-1.5">
+              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7"/>
+              </svg>
+              Back to explorer
+            </a>
+            <span className="text-xs text-slate-600">Abu Dhabi Sales Explorer</span>
           </div>
-        </aside>
-
-        {/* Charts */}
-        <main className="flex-1 overflow-y-auto p-5 space-y-4">
-          {/* Top row: price + sqm side by side */}
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-            <MedianPriceChart data={priceData} />
-            <PricePerSqmChart data={sqmData} />
-          </div>
-
-          {/* Comparison chart — full width */}
-          <ProjectComparisonChart data={comparisonData} projects={selectedProjects} />
-
-          {/* Volume — full width */}
-          <VolumeChart data={volumeData} />
+        </header>
+        <main className="mx-auto max-w-2xl px-6 py-8">
+          <PostCard post={deeplinkPost} />
         </main>
       </div>
+    )
+  }
+
+  // Main view
+  return (
+    <div className="min-h-screen bg-[#0f172a] text-slate-100">
+      {/* Header */}
+      <header className="border-b border-slate-800 px-6 py-4 sticky top-0 z-10 backdrop-blur bg-[#0f172a]/90">
+        <div className="mx-auto max-w-2xl flex items-center justify-between">
+          <div>
+            <h1 className="text-lg font-bold text-white">Abu Dhabi Sales Explorer</h1>
+            <p className="text-xs text-slate-500 mt-0.5">104,848 transactions · 2019–2026</p>
+          </div>
+          {dbError && (
+            <span className="text-xs text-red-400">DB error: {dbError}</span>
+          )}
+          {!ready && !dbError && (
+            <span className="text-xs text-slate-500 animate-pulse">Loading data…</span>
+          )}
+        </div>
+      </header>
+
+      {/* Chat area */}
+      <main className="mx-auto max-w-2xl px-6 py-6 space-y-6">
+        {/* Input section */}
+        <section className="space-y-3">
+          <SmartTopics onSelect={analyze} isLoading={isLoading || !ready} />
+          <ChatInput onSubmit={analyze} isLoading={isLoading || !ready} />
+          {analysisError && (
+            <p className="text-xs text-red-400 px-1">{analysisError}</p>
+          )}
+        </section>
+
+        {/* Post feed */}
+        <PostFeed
+          posts={posts}
+          pendingPost={pendingPost}
+          onRemove={removePost}
+        />
+      </main>
     </div>
   )
 }
