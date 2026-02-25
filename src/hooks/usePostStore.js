@@ -39,8 +39,8 @@ export function usePostStore() {
   }, [])
 
   const getPost = useCallback((id) => {
-    return loadPosts().find(p => p.id === id)
-  }, [])
+    return posts.find(p => p.id === id)
+  }, [posts])
 
   return { posts, addPost, removePost, getPost }
 }
