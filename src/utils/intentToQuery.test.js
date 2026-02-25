@@ -60,6 +60,17 @@ describe('intentToQuery', () => {
     const { sql } = intentToQuery({ queryType: 'unknown', filters: {} })
     expect(sql).toContain('median_price')
   })
+
+  it('falls back to price_trend with all filters preserved for unknown queryType', () => {
+    const { sql, params } = intentToQuery({ queryType: 'unknown', filters: { districts: ['Yas Island'] } })
+    expect(sql).toContain('median_price')
+    expect(params).toContain('Yas Island')
+  })
+
+  it('works when intent has no filters key at all', () => {
+    const { sql } = intentToQuery({ queryType: 'price_trend' })
+    expect(sql).toContain('median_price')
+  })
 })
 
 describe('pivotChartData', () => {
@@ -173,5 +184,11 @@ describe('computeSummaryStats', () => {
     expect(stats.dateRange).toBeDefined()
     expect(stats.dateRange.from).toBe('2024-01')
     expect(stats.dateRange.to).toBe('2024-03')
+  })
+
+  it('returns empty series for empty rows', () => {
+    const stats = computeSummaryStats([], { queryType: 'price_trend' })
+    expect(stats.series).toEqual([])
+    expect(stats.dateRange).toBeDefined()
   })
 })

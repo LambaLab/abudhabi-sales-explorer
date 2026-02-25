@@ -7,6 +7,12 @@ import {
   buildLayoutComparisonQuery,
 } from './queries.js'
 
+const SERIES_KEY = {
+  project_comparison:  'project_name',
+  district_comparison: 'district',
+  layout_distribution: 'layout',
+}
+
 /**
  * Convert Claude's structured intent into a DuckDB { sql, params } pair.
  */
@@ -34,7 +40,7 @@ export function intentToQuery(intent) {
       return buildLayoutComparisonQuery({ layouts, districts, projects, dateFrom, dateTo })
 
     default:
-      return buildMonthlyPriceQuery({ dateFrom, dateTo })
+      return buildMonthlyPriceQuery({ projects, districts, layouts, saleTypes, dateFrom, dateTo })
   }
 }
 
@@ -48,19 +54,15 @@ export function intentToQuery(intent) {
 export function pivotChartData(rows, intent) {
   const { queryType } = intent
 
-  const PIVOT_KEY = {
-    project_comparison:  'project_name',
-    district_comparison: 'district',
-    layout_distribution: 'layout',
-  }[queryType]
+  const pivotKey = SERIES_KEY[queryType]
 
-  if (!PIVOT_KEY) return { chartData: rows, chartKeys: [] }
+  if (!pivotKey) return { chartData: rows, chartKeys: [] }
 
   const byMonth = {}
   const keys = new Set()
 
   rows.forEach(row => {
-    const seriesName = String(row[PIVOT_KEY])
+    const seriesName = String(row[pivotKey])
     if (!byMonth[row.month]) byMonth[row.month] = { month: row.month }
     byMonth[row.month][seriesName] = Math.round(Number(row.median_price))
     keys.add(seriesName)
@@ -78,10 +80,14 @@ export function pivotChartData(rows, intent) {
 export function computeSummaryStats(rows, intent) {
   const { queryType } = intent
 
+  if (!rows || rows.length === 0) {
+    return { series: [], dateRange: { from: null, to: null } }
+  }
+
   if (queryType === 'volume_trend') {
     const sorted = [...rows].sort((a, b) => a.month.localeCompare(b.month))
     const counts = sorted.map(r => Number(r.tx_count))
-    const peak = Math.max(...counts)
+    const peak = counts.length ? Math.max(...counts) : 0
     const peakRow = sorted.find(r => Number(r.tx_count) === peak)
     return {
       totalTransactions: counts.reduce((a, b) => a + b, 0),
@@ -92,17 +98,13 @@ export function computeSummaryStats(rows, intent) {
     }
   }
 
-  const PIVOT_KEY = {
-    project_comparison:  'project_name',
-    district_comparison: 'district',
-    layout_distribution: 'layout',
-  }[queryType]
+  const pivotKey = SERIES_KEY[queryType]
 
-  if (PIVOT_KEY) {
+  if (pivotKey) {
     // Multi-series: group rows by series name
     const seriesMap = {}
     rows.forEach(row => {
-      const key = String(row[PIVOT_KEY])
+      const key = String(row[pivotKey])
       if (!seriesMap[key]) seriesMap[key] = []
       seriesMap[key].push({ month: row.month, price: Number(row.median_price), count: Number(row.tx_count) })
     })
