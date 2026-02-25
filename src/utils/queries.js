@@ -145,3 +145,64 @@ export const META_QUERY = `
   FROM sales
   WHERE price_aed > 0
 `
+
+/**
+ * Monthly median price grouped by district (for district comparison chart)
+ */
+export function buildDistrictComparisonQuery({ districts = [], dateFrom, dateTo }) {
+  if (!districts.length) return { sql: '', params: [] }
+  const conditions = []
+  const params = []
+  if (dateFrom) { conditions.push('sale_date >= ?'); params.push(dateFrom) }
+  if (dateTo)   { conditions.push('sale_date <= ?'); params.push(dateTo) }
+  conditions.push(`district IN (${districts.map(() => '?').join(',')})`)
+  params.push(...districts)
+  conditions.push('price_aed > 0')
+  const sql = `
+    SELECT
+      strftime(sale_date, '%Y-%m')   AS month,
+      district,
+      MEDIAN(price_aed)               AS median_price,
+      CAST(COUNT(*) AS INTEGER)       AS tx_count
+    FROM sales
+    WHERE ${conditions.join(' AND ')}
+    GROUP BY month, district
+    ORDER BY month
+  `
+  return { sql, params }
+}
+
+/**
+ * Monthly median price grouped by layout (for layout comparison chart)
+ * Optional district/project filters to scope the data
+ */
+export function buildLayoutComparisonQuery({ layouts = [], districts = [], projects = [], dateFrom, dateTo }) {
+  if (!layouts.length) return { sql: '', params: [] }
+  const conditions = []
+  const params = []
+  if (dateFrom) { conditions.push('sale_date >= ?'); params.push(dateFrom) }
+  if (dateTo)   { conditions.push('sale_date <= ?'); params.push(dateTo) }
+  if (districts.length) {
+    conditions.push(`district IN (${districts.map(() => '?').join(',')})`)
+    params.push(...districts)
+  }
+  if (projects.length) {
+    conditions.push(`project_name IN (${projects.map(() => '?').join(',')})`)
+    params.push(...projects)
+  }
+  conditions.push(`layout IN (${layouts.map(() => '?').join(',')})`)
+  params.push(...layouts)
+  conditions.push('price_aed > 0')
+  const sql = `
+    SELECT
+      strftime(sale_date, '%Y-%m')   AS month,
+      layout,
+      MEDIAN(price_aed)               AS median_price,
+      CAST(COUNT(*) AS INTEGER)       AS tx_count
+    FROM sales
+    WHERE ${conditions.join(' AND ')}
+    GROUP BY month, layout
+    ORDER BY month
+  `
+  return { sql, params }
+}

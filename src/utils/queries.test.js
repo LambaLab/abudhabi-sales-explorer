@@ -61,3 +61,53 @@ describe('buildVolumeQuery', () => {
     expect(sql).toContain('COUNT(*)')
   })
 })
+
+import { buildDistrictComparisonQuery, buildLayoutComparisonQuery } from './queries'
+
+describe('buildDistrictComparisonQuery', () => {
+  it('returns empty sql when no districts', () => {
+    const { sql } = buildDistrictComparisonQuery({ districts: [] })
+    expect(sql).toBe('')
+  })
+
+  it('returns SQL grouped by district', () => {
+    const { sql, params } = buildDistrictComparisonQuery({
+      districts: ['Yas Island', 'Al Reem Island'],
+      dateFrom: '2024-01',
+      dateTo:   '2025-01',
+    })
+    expect(sql).toContain('district')
+    expect(sql).toContain('GROUP BY month, district')
+    expect(sql).toContain('MEDIAN(price_aed)')
+    expect(params).toContain('Yas Island')
+    expect(params).toContain('Al Reem Island')
+    expect(params).toContain('2024-01')
+  })
+})
+
+describe('buildLayoutComparisonQuery', () => {
+  it('returns empty sql when no layouts', () => {
+    const { sql } = buildLayoutComparisonQuery({ layouts: [] })
+    expect(sql).toBe('')
+  })
+
+  it('returns SQL grouped by layout', () => {
+    const { sql, params } = buildLayoutComparisonQuery({
+      layouts: ['1 Bedroom', '2 Bedrooms', '3 Bedrooms'],
+    })
+    expect(sql).toContain('layout')
+    expect(sql).toContain('GROUP BY month, layout')
+    expect(sql).toContain('MEDIAN(price_aed)')
+    expect(params).toContain('1 Bedroom')
+  })
+
+  it('accepts optional district and project filters', () => {
+    const { sql, params } = buildLayoutComparisonQuery({
+      layouts: ['Studio'],
+      districts: ['Yas Island'],
+    })
+    expect(sql).toContain('district IN')
+    expect(params).toContain('Yas Island')
+    expect(params).toContain('Studio')
+  })
+})
