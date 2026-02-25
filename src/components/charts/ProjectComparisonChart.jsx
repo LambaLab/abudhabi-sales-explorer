@@ -5,7 +5,7 @@ const COLORS = ['#e94560','#38bdf8','#a78bfa','#34d399','#fb923c','#f472b6','#fa
 
 const fmt = (v) => v >= 1_000_000 ? `${(v / 1_000_000).toFixed(1)}M` : `${(v / 1_000).toFixed(0)}K`
 
-export function ProjectComparisonChart({ data, seriesKeys }) {
+export function ProjectComparisonChart({ data, seriesKeys = [] }) {
   const isEmpty = !data || !Array.isArray(data) || data.length === 0 || !seriesKeys.length
 
   return (
