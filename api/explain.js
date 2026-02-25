@@ -16,10 +16,21 @@ Rules:
 
 export default async function handler(req) {
   if (req.method !== 'POST') {
-    return new Response('Method not allowed', { status: 405 })
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405, headers: { 'Content-Type': 'application/json' } })
   }
 
-  const { prompt, intent, summaryStats } = await req.json()
+  let prompt, intent, summaryStats
+  try {
+    const body = await req.json()
+    prompt = body.prompt
+    intent = body.intent
+    summaryStats = body.summaryStats
+  } catch {
+    return new Response(JSON.stringify({ error: 'Invalid JSON body' }), { status: 400, headers: { 'Content-Type': 'application/json' } })
+  }
+  if (!prompt || !intent || !summaryStats) {
+    return new Response(JSON.stringify({ error: 'Missing required fields: prompt, intent, summaryStats' }), { status: 400, headers: { 'Content-Type': 'application/json' } })
+  }
 
   const userMessage = `Original question: "${prompt}"
 
@@ -46,8 +57,9 @@ Write the analyst commentary now.`
             controller.enqueue(new TextEncoder().encode(chunk.delta.text))
           }
         }
-      } finally {
         controller.close()
+      } catch (err) {
+        controller.error(err)
       }
     },
   })
@@ -55,7 +67,6 @@ Write the analyst commentary now.`
   return new Response(readable, {
     headers: {
       'Content-Type': 'text/plain; charset=utf-8',
-      'Transfer-Encoding': 'chunked',
     },
   })
 }
