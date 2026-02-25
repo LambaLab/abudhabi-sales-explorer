@@ -1,18 +1,19 @@
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { ChartCard } from './ChartCard'
-import { COLORS } from '../ProjectSearch'
+
+const COLORS = ['#e94560','#38bdf8','#a78bfa','#34d399','#fb923c','#f472b6','#facc15','#60a5fa']
 
 const fmt = (v) => v >= 1_000_000 ? `${(v / 1_000_000).toFixed(1)}M` : `${(v / 1_000).toFixed(0)}K`
 
-export function ProjectComparisonChart({ data, projects }) {
-  const isEmpty = !data || !Array.isArray(data) || data.length === 0 || !projects.length
+export function ProjectComparisonChart({ data, seriesKeys }) {
+  const isEmpty = !data || !Array.isArray(data) || data.length === 0 || !seriesKeys.length
 
   return (
     <ChartCard
       title="Project Comparison"
       subtitle={
-        projects.length
-          ? `Median price · ${projects.length} project${projects.length > 1 ? 's' : ''}`
+        seriesKeys.length
+          ? `Median price · ${seriesKeys.length} project${seriesKeys.length > 1 ? 's' : ''}`
           : 'Select projects above to compare'
       }
       empty={isEmpty}
@@ -28,7 +29,7 @@ export function ProjectComparisonChart({ data, projects }) {
             labelStyle={{ color: '#94a3b8', marginBottom: 4 }}
           />
           <Legend wrapperStyle={{ fontSize: 11, color: '#94a3b8' }} />
-          {projects.map((project, i) => (
+          {seriesKeys.map((project, i) => (
             <Line
               key={project}
               type="monotone"
