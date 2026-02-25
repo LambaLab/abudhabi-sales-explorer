@@ -96,6 +96,18 @@ describe('pivotChartData', () => {
     expect(chartData[0]['Yas Island']).toBe(1800000)
     expect(chartData[0]['Al Reem Island']).toBe(2200000)
   })
+
+  it('pivots layout rows using layout key', () => {
+    const rows = [
+      { month: '2024-01', layout: '1 Bedroom', median_price: 900000, tx_count: 15 },
+      { month: '2024-01', layout: '2 Bedrooms', median_price: 1400000, tx_count: 10 },
+    ]
+    const { chartData, chartKeys } = pivotChartData(rows, { queryType: 'layout_distribution' })
+    expect(chartData[0]['1 Bedroom']).toBe(900000)
+    expect(chartData[0]['2 Bedrooms']).toBe(1400000)
+    expect(chartKeys).toContain('1 Bedroom')
+    expect(chartKeys).toContain('2 Bedrooms')
+  })
 })
 
 describe('computeSummaryStats', () => {
@@ -119,5 +131,47 @@ describe('computeSummaryStats', () => {
     expect(stats.totalTransactions).toBe(250)
     expect(stats.peakCount).toBe(150)
     expect(stats.peakMonth).toBe('2024-02')
+  })
+
+  it('computes multi-series stats for project_comparison', () => {
+    const rows = [
+      { month: '2024-01', project_name: 'Noya - Phase 1', median_price: 2000000, tx_count: 10 },
+      { month: '2024-06', project_name: 'Noya - Phase 1', median_price: 2400000, tx_count: 12 },
+      { month: '2024-01', project_name: 'Yas Acres', median_price: 1500000, tx_count: 5 },
+      { month: '2024-06', project_name: 'Yas Acres', median_price: 1600000, tx_count: 6 },
+    ]
+    const stats = computeSummaryStats(rows, { queryType: 'project_comparison' })
+    expect(stats.series).toHaveLength(2)
+    const noya = stats.series.find(s => s.name === 'Noya - Phase 1')
+    expect(noya.first).toBe(2000000)
+    expect(noya.last).toBe(2400000)
+    expect(noya.pctChange).toBe(20)
+    expect(stats.dateRange).toBeDefined()
+    expect(stats.dateRange.from).toBe('2024-01')
+  })
+
+  it('computes single-series stats for rate_trend using median_rate key', () => {
+    const rows = [
+      { month: '2024-01', median_rate: 10000, tx_count: 20 },
+      { month: '2024-06', median_rate: 12000, tx_count: 25 },
+    ]
+    const stats = computeSummaryStats(rows, { queryType: 'rate_trend' })
+    expect(stats.series[0].first).toBe(10000)
+    expect(stats.series[0].last).toBe(12000)
+    expect(stats.series[0].pctChange).toBe(20)
+    expect(stats.dateRange).toBeDefined()
+    expect(stats.dateRange.from).toBe('2024-01')
+  })
+
+  it('includes dateRange in volume_trend result', () => {
+    const rows = [
+      { month: '2024-01', tx_count: 100 },
+      { month: '2024-02', tx_count: 150 },
+      { month: '2024-03', tx_count: 120 },
+    ]
+    const stats = computeSummaryStats(rows, { queryType: 'volume_trend' })
+    expect(stats.dateRange).toBeDefined()
+    expect(stats.dateRange.from).toBe('2024-01')
+    expect(stats.dateRange.to).toBe('2024-03')
   })
 })
