@@ -25,3 +25,6 @@ dist-ssr
 .env
 
 public/data/abu_dhabi_sales.csv
+
+.env.local
+.env*.local
