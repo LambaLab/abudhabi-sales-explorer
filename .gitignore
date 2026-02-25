@@ -24,7 +24,6 @@ dist-ssr
 *.sw?
 .env
 
-public/data/abu_dhabi_sales.csv
-
 .env.local
 .env*.local
+.vercel
