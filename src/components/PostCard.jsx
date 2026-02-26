@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect } from 'react'
-import { DynamicChart } from './charts/DynamicChart'
-import { ReplyCard }    from './ReplyCard'
-import { buildShareUrl } from '../utils/deeplink'
-import { ThinkingLabel } from './ThinkingLabel'
+import { DynamicChart }    from './charts/DynamicChart'
+import { InlineDateRange } from './charts/InlineDateRange'
+import { ReplyCard }       from './ReplyCard'
+import { buildShareUrl }   from '../utils/deeplink'
+import { ThinkingLabel }   from './ThinkingLabel'
 
 function Skeleton({ className }) {
   return <div className={`animate-pulse rounded bg-slate-700/50 ${className}`} />
@@ -48,9 +49,12 @@ function ReplyInput({ postId, onSubmit, disabled }) {
       <button
         onClick={() => setOpen(true)}
         disabled={disabled}
-        className="text-xs text-slate-500 hover:text-slate-300 transition-colors flex items-center gap-1 disabled:opacity-30 disabled:cursor-not-allowed"
+        className="text-sm text-slate-500 hover:text-slate-300 transition-colors flex items-center gap-1.5 disabled:opacity-30 disabled:cursor-not-allowed"
       >
-        <span>↳</span> Ask a follow-up
+        <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+        </svg>
+        Ask a follow-up
       </button>
     )
   }
@@ -70,12 +74,12 @@ function ReplyInput({ postId, onSubmit, disabled }) {
         }}
         placeholder="Ask a follow-up…"
         rows={1}
-        className="flex-1 resize-none bg-transparent border-b border-slate-600 text-xs text-slate-200 placeholder-slate-600 focus:outline-none focus:border-slate-400 py-1"
+        className="flex-1 resize-none bg-transparent border-b border-slate-600 text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:border-slate-400 py-1"
       />
       <button
         type="submit"
         disabled={!value.trim() || disabled}
-        className="text-xs text-accent disabled:opacity-30 pb-1 hover:opacity-80 transition-opacity"
+        className="text-sm text-accent disabled:opacity-30 pb-1 hover:opacity-80 transition-opacity"
       >
         →
       </button>
@@ -83,13 +87,28 @@ function ReplyInput({ postId, onSubmit, disabled }) {
   )
 }
 
-export function PostCard({ post, onRemove, onReply, isActive, onCancel }) {
+export function PostCard({ post, onReply, isActive, onCancel, onDeepAnalysis, chartType = 'bar' }) {
   const [copied, setCopied] = useState(false)
+  const [dateRange, setDateRange] = useState({ dateFrom: '', dateTo: '' })
 
   const isBodyLoading = post.status === 'analyzing' || post.status === 'querying' || post.status === 'explaining'
   const isStreaming   = post.status === 'explaining'
   const isDone        = post.status === 'done'
   const isError       = post.status === 'error'
+
+  // Filter chartData by local dateRange selection (client-side, no re-query)
+  const filteredChartData = (() => {
+    const data = post.chartData
+    if (!data?.length) return data
+    const { dateFrom, dateTo } = dateRange
+    if (!dateFrom && !dateTo) return data
+    return data.filter(row => {
+      const m = row.month ?? ''
+      if (dateFrom && m < dateFrom) return false
+      if (dateTo   && m > dateTo)   return false
+      return true
+    })
+  })()
 
   // A reply is "in flight" if any reply does not have status 'done' or 'error'
   const hasActiveReply = post.replies?.some(
@@ -155,17 +174,6 @@ export function PostCard({ post, onRemove, onReply, isActive, onCancel }) {
               )}
             </button>
           )}
-          {onRemove && isDone && (
-            <button
-              onClick={() => onRemove(post.id)}
-              className="rounded-lg p-1.5 text-slate-600 hover:bg-slate-700 hover:text-slate-300 transition-colors"
-              title="Remove post"
-            >
-              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"/>
-              </svg>
-            </button>
-          )}
         </div>
       </div>
 
@@ -177,19 +185,57 @@ export function PostCard({ post, onRemove, onReply, isActive, onCancel }) {
       ) : (
         <>
           {post.analysisText ? (
-            <div className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed space-y-3 whitespace-pre-wrap">
-              {post.analysisText}
-            </div>
+            <>
+              <div className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-wrap">
+                {post.isExpanded && post.fullText ? post.fullText : post.analysisText}
+              </div>
+
+              {/* Deeper analysis link */}
+              {(isDone || post.status === 'deepening') && onDeepAnalysis && (
+                <button
+                  onClick={() => onDeepAnalysis(post.id)}
+                  disabled={post.status === 'deepening'}
+                  className="flex items-center gap-1 text-xs text-slate-400 dark:text-slate-500 hover:text-accent dark:hover:text-accent transition-colors disabled:opacity-40 mt-1"
+                >
+                  {post.status === 'deepening' ? (
+                    <>
+                      <svg className="h-3 w-3 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v3m0 12v3M3 12h3m12 0h3"/>
+                      </svg>
+                      Loading deeper analysis…
+                    </>
+                  ) : post.isExpanded ? (
+                    <>
+                      <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 15l7-7 7 7"/>
+                      </svg>
+                      Less
+                    </>
+                  ) : (
+                    <>
+                      <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7"/>
+                      </svg>
+                      Deeper analysis
+                    </>
+                  )}
+                </button>
+              )}
+            </>
           ) : (
             !isStreaming && <p className="text-sm text-slate-500 italic">No analysis available.</p>
           )}
 
           {post.chartData?.length > 0 && (
-            <div className="mt-2">
+            <div className="mt-2 space-y-2">
+              <div className="flex justify-end">
+                <InlineDateRange value={dateRange} onChange={setDateRange} />
+              </div>
               <DynamicChart
                 intent={post.intent}
-                chartData={post.chartData}
+                chartData={filteredChartData}
                 chartKeys={post.chartKeys}
+                chartType={chartType}
               />
             </div>
           )}
