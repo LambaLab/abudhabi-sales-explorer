@@ -33,12 +33,15 @@ export default function App() {
   }, [posts.length])
 
   // Handle deeplink: if URL has ?post=... show that single post
-  const { postId, post: urlPost } = parseShareUrl()
-  const deeplinkPost = postId ? (getPost(postId) ?? urlPost) : null
+  const { postId: deeplinkPostId, post: urlPost } = parseShareUrl()
+  const deeplinkPost = deeplinkPostId ? (getPost(deeplinkPostId) ?? urlPost) : null
 
   useEffect(() => {
     if (urlPost && !getPost(urlPost.id)) addPost(urlPost)
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: runs
+    // once on mount to seed the store from a deeplink URL. addPost/getPost are
+    // stable references; urlPost is from window.location (immutable after mount).
+  }, [])
 
   // ── Deeplink view ──────────────────────────────────────────────────────────
   if (deeplinkPost) {
