@@ -41,7 +41,7 @@ function formatSummaryStats(stats, queryType) {
   if (stats.totalTransactions !== undefined) {
     lines.push(`• Total transactions in period: ${Number(stats.totalTransactions).toLocaleString()}`)
     if (stats.avgMonthly)  lines.push(`• Monthly average: ${Number(stats.avgMonthly).toLocaleString()}`)
-    if (stats.peakMonth)   lines.push(`• Peak month: ${stats.peakMonth} with ${Number(stats.peakCount).toLocaleString()} transactions`)
+    if (stats.peakMonth && stats.peakCount != null) lines.push(`• Peak month: ${stats.peakMonth} with ${Number(stats.peakCount).toLocaleString()} transactions`)
     return lines.join('\n')
   }
 
@@ -67,6 +67,10 @@ function formatSummaryStats(stats, queryType) {
     lines.push(`• Change:         ${s.pctChange > 0 ? '+' : ''}${s.pctChange}% over the period`)
     if (s.peak)    lines.push(`• Peak:           ${unit} ${Number(s.peak).toLocaleString()} (${s.peakMonth})`)
     if (s.txCount) lines.push(`• Total transactions in period: ${Number(s.txCount).toLocaleString()}`)
+  }
+
+  if (stats.series !== undefined && stats.series.length === 0) {
+    lines.push('• No series data available.')
   }
 
   return lines.join('\n')
