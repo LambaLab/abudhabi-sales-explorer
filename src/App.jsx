@@ -21,7 +21,7 @@ export default function App() {
   const store = usePostStore()
   const { posts, addPost, removePost, getPost, patchPost, addReply, patchReply } = store
 
-  const { analyze, analyzeReply, activePostId, cancel } = useAnalysis(meta, {
+  const { analyze, analyzeReply, analyzeDeep, activePostId, cancel } = useAnalysis(meta, {
     addPost, patchPost, addReply, patchReply, getPost,
   })
 
@@ -102,7 +102,7 @@ export default function App() {
 
           {/* Feed / Chart tabs */}
           <div className="flex items-center gap-1 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800/50 p-1">
-            {['feed', 'chart'].map(tab => (
+            {['feed', 'charts'].map(tab => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
@@ -144,16 +144,17 @@ export default function App() {
             <div className="mx-auto max-w-2xl px-4 py-4 space-y-4">
               <PostFeed
                 posts={posts}
-                onRemove={removePost}
                 onReply={(postId, prompt) => analyzeReply(postId, prompt + getDateRangeHint())}
                 activePostId={activePostId}
                 onCancel={cancel}
+                onDeepAnalysis={analyzeDeep}
+                chartType={settings.chartType}
               />
               <div ref={feedEndRef} />
             </div>
           </main>
 
-          <div className="shrink-0 border-t border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-[#0f172a]/95 backdrop-blur px-4 py-3 z-10">
+          <div className="shrink-0 px-4 py-3 z-10">
             <div className="mx-auto max-w-2xl">
               <ChatInput
                 onSubmit={analyzeWithSettings}
@@ -167,8 +168,8 @@ export default function App() {
         </>
       )}
 
-      {/* ── Chart tab ── */}
-      {activeTab === 'chart' && (
+      {/* ── Charts tab ── */}
+      {activeTab === 'charts' && (
         <main className="flex-1 overflow-y-auto">
           <ChartTab meta={meta} defaultDateRange={settings.defaultDateRange} />
         </main>
