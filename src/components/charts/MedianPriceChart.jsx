@@ -6,9 +6,9 @@ const fmt = (v) => v >= 1_000_000 ? `${(v / 1_000_000).toFixed(1)}M` : `${(v / 1
 const CustomTooltip = ({ active, payload, label }) => {
   if (!active || !payload?.length) return null
   return (
-    <div className="bg-slate-800 border border-slate-700 rounded px-3 py-2 text-xs">
+    <div className="border rounded px-3 py-2 text-xs" style={{ backgroundColor: 'var(--tooltip-bg)', borderColor: 'var(--tooltip-border)', color: 'var(--tooltip-color)' }}>
       <p className="text-slate-400 mb-1">{label}</p>
-      <p className="text-white font-medium">AED {Number(payload[0]?.value).toLocaleString()}</p>
+      <p className="font-medium">AED {Number(payload[0]?.value).toLocaleString()}</p>
       <p className="text-slate-500">{payload[0]?.payload?.tx_count?.toLocaleString()} transactions</p>
     </div>
   )

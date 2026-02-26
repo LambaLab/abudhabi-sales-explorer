@@ -4,9 +4,9 @@ import { ChartCard } from './ChartCard'
 const CustomTooltip = ({ active, payload, label }) => {
   if (!active || !payload?.length) return null
   return (
-    <div className="bg-slate-800 border border-slate-700 rounded px-3 py-2 text-xs">
+    <div className="border rounded px-3 py-2 text-xs" style={{ backgroundColor: 'var(--tooltip-bg)', borderColor: 'var(--tooltip-border)', color: 'var(--tooltip-color)' }}>
       <p className="text-slate-400 mb-1">{label}</p>
-      <p className="text-white font-medium">{Number(payload[0]?.value).toLocaleString()} transactions</p>
+      <p className="font-medium">{Number(payload[0]?.value).toLocaleString()} transactions</p>
     </div>
   )
 }

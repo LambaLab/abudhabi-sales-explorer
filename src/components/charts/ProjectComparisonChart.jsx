@@ -25,7 +25,7 @@ export function ProjectComparisonChart({ data, seriesKeys = [] }) {
           <YAxis tickFormatter={fmt} tick={{ fontSize: 10, fill: '#64748b' }} tickLine={false} axisLine={false} width={48} />
           <Tooltip
             formatter={(value, name) => [`AED ${Number(value).toLocaleString()}`, name]}
-            contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: 6, fontSize: 11 }}
+            contentStyle={{ backgroundColor: 'var(--tooltip-bg)', border: '1px solid var(--tooltip-border)', borderRadius: 6, fontSize: 11, color: 'var(--tooltip-color)' }}
             labelStyle={{ color: '#94a3b8', marginBottom: 4 }}
           />
           <Legend wrapperStyle={{ fontSize: 11, color: '#94a3b8' }} />
