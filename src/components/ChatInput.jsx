@@ -62,7 +62,7 @@ export function ChatInput({ onSubmit, onStop, isLoading, settings, onSettingsCha
         rows={1}
         disabled={isLoading}
         style={{ resize: 'none', minHeight: '44px', maxHeight: '128px', overflowY: 'auto' }}
-        className="flex-1 bg-transparent py-3 pr-2 text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none disabled:opacity-50"
+        className="flex-1 bg-transparent py-3 pl-2 pr-2 text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none disabled:opacity-50"
       />
 
       {/* Send / Stop button — right edge inside pill */}
