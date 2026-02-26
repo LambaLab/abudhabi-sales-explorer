@@ -1,23 +1,26 @@
 @import "tailwindcss";
 
+/* Enable class-based dark mode: add `dark` class to <html> to activate */
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   --color-brand: #1a1a2e;
   --color-accent: #e94560;
 }
 
 body {
-  background-color: #0f0f23;
-  color: #e2e8f0;
+  background-color: #f8fafc;
+  color: #0f172a;
   font-family: 'Inter', system-ui, sans-serif;
 }
 
-::-webkit-scrollbar {
-  width: 6px;
+.dark body {
+  background-color: #0f0f23;
+  color: #e2e8f0;
 }
-::-webkit-scrollbar-track {
-  background: #1a1a2e;
-}
-::-webkit-scrollbar-thumb {
-  background: #374151;
-  border-radius: 3px;
-}
+
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: #f1f5f9; }
+::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+.dark ::-webkit-scrollbar-track { background: #1a1a2e; }
+.dark ::-webkit-scrollbar-thumb { background: #374151; }
