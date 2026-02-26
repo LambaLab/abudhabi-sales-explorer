@@ -40,12 +40,12 @@ describe('usePostStore — addPost', () => {
   it('persists to localStorage', () => {
     const { result } = renderHook(() => usePostStore())
     act(() => result.current.addPost(makePost()))
-    const stored = JSON.parse(localStorage.getItem('ad_posts_v2'))
+    const stored = JSON.parse(localStorage.getItem('ad_posts_v3'))
     expect(stored[0].id).toBe('p1')
   })
 
   it('loads from localStorage on init', () => {
-    localStorage.setItem('ad_posts_v2', JSON.stringify([makePost()]))
+    localStorage.setItem('ad_posts_v3', JSON.stringify([makePost()]))
     const { result } = renderHook(() => usePostStore())
     expect(result.current.posts).toHaveLength(1)
   })
@@ -63,7 +63,7 @@ describe('usePostStore — removePost', () => {
     const { result } = renderHook(() => usePostStore())
     act(() => result.current.addPost(makePost()))
     act(() => result.current.removePost('p1'))
-    const stored = JSON.parse(localStorage.getItem('ad_posts_v2'))
+    const stored = JSON.parse(localStorage.getItem('ad_posts_v3'))
     expect(stored.find(p => p.id === 'p1')).toBeUndefined()
   })
 })
@@ -96,7 +96,7 @@ describe('usePostStore — patchPost', () => {
     const { result } = renderHook(() => usePostStore())
     act(() => result.current.addPost(makePost()))
     act(() => result.current.patchPost('p1', { title: 'Updated' }))
-    const stored = JSON.parse(localStorage.getItem('ad_posts_v2'))
+    const stored = JSON.parse(localStorage.getItem('ad_posts_v3'))
     expect(stored[0].title).toBe('Updated')
   })
 })
@@ -122,10 +122,22 @@ describe('usePostStore — addReply', () => {
     const { result } = renderHook(() => usePostStore())
     act(() => result.current.addPost(makePost()))
     act(() => result.current.addReply('p1', { id: 'r1', prompt: 'follow-up', status: 'analyzing' }))
-    const stored = JSON.parse(localStorage.getItem('ad_posts_v2'))
+    const stored = JSON.parse(localStorage.getItem('ad_posts_v3'))
     const storedPost = stored.find(p => p.id === 'p1')
     expect(storedPost.replies).toHaveLength(1)
     expect(storedPost.replies[0].id).toBe('r1')
+  })
+})
+
+describe('shortText / fullText / isExpanded', () => {
+  it('patchPost can set shortText and fullText', () => {
+    const { result } = renderHook(() => usePostStore())
+    act(() => result.current.addPost({ id: '1', shortText: null, fullText: null, isExpanded: false, replies: [] }))
+    act(() => result.current.patchPost('1', { shortText: 'short', fullText: 'full', isExpanded: true }))
+    const post = result.current.posts.find(p => p.id === '1')
+    expect(post.shortText).toBe('short')
+    expect(post.fullText).toBe('full')
+    expect(post.isExpanded).toBe(true)
   })
 })
 
@@ -145,7 +157,7 @@ describe('usePostStore — patchReply', () => {
     act(() => result.current.addPost(makePost()))
     act(() => result.current.addReply('p1', { id: 'r1', status: 'analyzing', analysisText: '' }))
     act(() => result.current.patchReply('p1', 'r1', { status: 'done', analysisText: 'reply text' }))
-    const stored = JSON.parse(localStorage.getItem('ad_posts_v2'))
+    const stored = JSON.parse(localStorage.getItem('ad_posts_v3'))
     const storedReply = stored.find(p => p.id === 'p1').replies[0]
     expect(storedReply.status).toBe('done')
     expect(storedReply.analysisText).toBe('reply text')

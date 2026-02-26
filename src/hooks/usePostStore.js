@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react'
 
-const STORAGE_KEY = 'ad_posts_v2'  // bumped: schema changed (replies[], status, append order)
+const STORAGE_KEY = 'ad_posts_v3'  // bumped: schema changed (shortText, fullText, isExpanded, summaryStats)
 
 function loadPosts() {
   try {
