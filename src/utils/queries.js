@@ -228,3 +228,181 @@ export function buildLayoutComparisonQuery({ layouts = [], districts = [], proje
   `
   return { sql, params }
 }
+
+/**
+ * Monthly average sale price (vs MEDIAN in buildMonthlyPriceQuery)
+ */
+export function buildAvgPriceQuery(filters = {}) {
+  const { where, params } = buildWhereClause(filters)
+  const priceFilter = where ? 'AND price_aed > 0' : 'WHERE price_aed > 0'
+  const sql = `
+    SELECT
+      strftime(sale_date, '%Y-%m')      AS month,
+      ROUND(AVG(price_aed))             AS avg_price,
+      CAST(COUNT(*) AS INTEGER)         AS tx_count
+    FROM sales
+    ${where} ${priceFilter}
+    GROUP BY month
+    ORDER BY month
+  `
+  return { sql, params }
+}
+
+/**
+ * Monthly average price/sqm split by sale_type (Off-Plan vs Ready)
+ */
+export function buildOffPlanComparisonQuery(filters = {}) {
+  const { where, params } = buildWhereClause(filters)
+  const extraFilter = where ? 'AND price_aed > 0 AND area_sqm > 0' : 'WHERE price_aed > 0 AND area_sqm > 0'
+  const sql = `
+    SELECT
+      strftime(sale_date, '%Y-%m')         AS month,
+      sale_type,
+      ROUND(AVG(price_aed / area_sqm))     AS avg_rate
+    FROM sales
+    ${where} ${extraFilter}
+    GROUP BY month, sale_type
+    ORDER BY month
+  `
+  return { sql, params }
+}
+
+/**
+ * Top projects by average price/sqm (for ranking chart)
+ */
+export function buildProjectRateQuery(filters = {}, limit = 15) {
+  const { where, params } = buildWhereClause(filters)
+  const extraFilter = where ? 'AND price_aed > 0 AND area_sqm > 0' : 'WHERE price_aed > 0 AND area_sqm > 0'
+  const sql = `
+    SELECT
+      project_name,
+      ROUND(AVG(price_aed / area_sqm))    AS avg_rate,
+      CAST(COUNT(*) AS INTEGER)            AS tx_count
+    FROM sales
+    ${where} ${extraFilter}
+    GROUP BY project_name
+    HAVING COUNT(*) >= 5
+    ORDER BY avg_rate DESC
+    LIMIT ${limit}
+  `
+  return { sql, params }
+}
+
+/**
+ * Top projects by transaction volume
+ */
+export function buildProjectVolumeQuery(filters = {}, limit = 15) {
+  const { where, params } = buildWhereClause(filters)
+  const whereOrDefault = where || 'WHERE 1=1'
+  const sql = `
+    SELECT
+      project_name,
+      CAST(COUNT(*) AS INTEGER)  AS tx_count
+    FROM sales
+    ${whereOrDefault}
+    GROUP BY project_name
+    ORDER BY tx_count DESC
+    LIMIT ${limit}
+  `
+  return { sql, params }
+}
+
+/**
+ * Layout mix — count per layout type
+ */
+export function buildLayoutMixQuery(filters = {}) {
+  const { where, params } = buildWhereClause(filters)
+  const whereOrDefault = where || 'WHERE 1=1'
+  const sql = `
+    SELECT
+      layout,
+      CAST(COUNT(*) AS INTEGER) AS tx_count
+    FROM sales
+    ${whereOrDefault} AND layout IS NOT NULL AND layout != 'unclassified'
+    GROUP BY layout
+    ORDER BY tx_count DESC
+  `.replace('WHERE 1=1 AND', 'WHERE')
+  return { sql, params }
+}
+
+/**
+ * Price/sqm distribution histogram — bucketed into ranges
+ */
+export function buildRateDistributionQuery(filters = {}) {
+  const { where, params } = buildWhereClause(filters)
+  const extraFilter = where ? 'AND price_aed > 0 AND area_sqm > 0' : 'WHERE price_aed > 0 AND area_sqm > 0'
+  const sql = `
+    SELECT
+      FLOOR((price_aed / area_sqm) / 2000) * 2000  AS bucket_start,
+      CAST(COUNT(*) AS INTEGER)                     AS count
+    FROM sales
+    ${where} ${extraFilter}
+    GROUP BY bucket_start
+    HAVING bucket_start BETWEEN 0 AND 40000
+    ORDER BY bucket_start
+  `
+  return { sql, params }
+}
+
+/**
+ * Total price distribution histogram
+ */
+export function buildPriceDistributionQuery(filters = {}) {
+  const { where, params } = buildWhereClause(filters)
+  const extraFilter = where ? 'AND price_aed > 100000' : 'WHERE price_aed > 100000'
+  const sql = `
+    SELECT
+      FLOOR(price_aed / 500000) * 500000  AS bucket_start,
+      CAST(COUNT(*) AS INTEGER)            AS count
+    FROM sales
+    ${where} ${extraFilter}
+    GROUP BY bucket_start
+    HAVING bucket_start BETWEEN 100000 AND 20000000
+    ORDER BY bucket_start
+  `
+  return { sql, params }
+}
+
+/**
+ * Size vs price scatter (sampled, max 500 rows)
+ */
+export function buildSizePriceScatterQuery(filters = {}, limit = 500) {
+  const { where, params } = buildWhereClause(filters)
+  const extraFilter = where ? 'AND price_aed > 0 AND area_sqm > 0' : 'WHERE price_aed > 0 AND area_sqm > 0'
+  const sql = `
+    SELECT
+      area_sqm,
+      price_aed,
+      project_name,
+      layout
+    FROM sales
+    ${where} ${extraFilter}
+    ORDER BY RANDOM()
+    LIMIT ${limit}
+  `
+  return { sql, params }
+}
+
+/**
+ * Average sale price by layout (1BR, 2BR, etc.)
+ */
+export function buildAvgPriceByLayoutQuery(filters = {}) {
+  const { where, params } = buildWhereClause(filters)
+  const extraFilter = where ? 'AND price_aed > 0' : 'WHERE price_aed > 0'
+  const sql = `
+    SELECT
+      layout,
+      ROUND(AVG(price_aed))             AS avg_price,
+      CAST(COUNT(*) AS INTEGER)          AS tx_count
+    FROM sales
+    ${where} ${extraFilter} AND layout IS NOT NULL AND layout != 'unclassified'
+    GROUP BY layout
+    ORDER BY avg_price
+  `.replace(/WHERE price_aed > 0\s+AND layout/, 'WHERE price_aed > 0 AND layout')
+  return { sql, params }
+}
+
+/**
+ * Average price/sqm by project (alias of buildProjectRateQuery)
+ */
+export { buildProjectRateQuery as buildAvgRateByProjectQuery }

@@ -62,7 +62,7 @@ describe('buildVolumeQuery', () => {
   })
 })
 
-import { buildDistrictComparisonQuery, buildLayoutComparisonQuery } from './queries'
+import { buildDistrictComparisonQuery, buildLayoutComparisonQuery, buildAvgPriceQuery, buildProjectVolumeQuery } from './queries'
 
 describe('buildDistrictComparisonQuery', () => {
   it('returns empty sql when no districts', () => {
@@ -109,5 +109,34 @@ describe('buildLayoutComparisonQuery', () => {
     expect(sql).toContain('district IN')
     expect(params).toContain('Yas Island')
     expect(params).toContain('Studio')
+  })
+})
+
+describe('buildAvgPriceQuery', () => {
+  it('returns sql and empty params with no filters', () => {
+    const { sql, params } = buildAvgPriceQuery({})
+    expect(sql).toContain('AVG(price_aed)')
+    expect(sql).toContain('GROUP BY month')
+    expect(params).toEqual([])
+  })
+
+  it('applies date filter', () => {
+    const { sql, params } = buildAvgPriceQuery({ dateFrom: '2023-01', dateTo: '2023-12' })
+    expect(params).toContain('2023-01-01')
+    expect(params).toContain('2023-12-31')
+  })
+})
+
+describe('buildProjectVolumeQuery', () => {
+  it('returns sql with no filters', () => {
+    const { sql, params } = buildProjectVolumeQuery({})
+    expect(sql).toContain('COUNT(*)')
+    expect(sql).toContain('project_name')
+    expect(params).toEqual([])
+  })
+
+  it('respects the limit parameter', () => {
+    const { sql } = buildProjectVolumeQuery({}, 20)
+    expect(sql).toContain('LIMIT 20')
   })
 })
