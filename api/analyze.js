@@ -66,11 +66,11 @@ Return ONLY this JSON structure (no markdown, no explanation):
   "title": "<max 60 chars>"
 }`
 
-  const contextNote = context
+  const contextNote = context && context.parentPrompt && context.parentTitle
     ? `\n\nThis is a FOLLOW-UP question to an existing analysis.
 Previous question: "${context.parentPrompt}"
 Previous analysis title: "${context.parentTitle}"
-Context from previous analysis: "${context.parentAnalysis}"
+Context from previous analysis: "${context.parentAnalysis ?? ''}"
 
 IMPORTANT: Add a "chartNeeded" field to your JSON response.
 Set chartNeeded: false if this follow-up can be answered from the context above without running a new data query.
