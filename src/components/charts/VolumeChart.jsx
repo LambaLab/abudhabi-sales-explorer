@@ -1,4 +1,4 @@
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import { ChartCard } from './ChartCard'
 
 const CustomTooltip = ({ active, payload, label }) => {
@@ -20,7 +20,6 @@ export function VolumeChart({ data }) {
     >
       <ResponsiveContainer width="100%" height={180}>
         <BarChart data={data} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
           <XAxis dataKey="month" tick={{ fontSize: 10, fill: '#64748b' }} tickLine={false} interval="preserveStartEnd" />
           <YAxis tick={{ fontSize: 10, fill: '#64748b' }} tickLine={false} axisLine={false} width={40} />
           <Tooltip content={<CustomTooltip />} />

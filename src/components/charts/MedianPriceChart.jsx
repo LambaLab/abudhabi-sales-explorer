@@ -1,4 +1,4 @@
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import { ChartCard } from './ChartCard'
 
 const fmt = (v) => v >= 1_000_000 ? `${(v / 1_000_000).toFixed(1)}M` : `${(v / 1_000).toFixed(0)}K`
@@ -23,7 +23,6 @@ export function MedianPriceChart({ data }) {
     >
       <ResponsiveContainer width="100%" height={220}>
         <LineChart data={data} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
           <XAxis dataKey="month" tick={{ fontSize: 10, fill: '#64748b' }} tickLine={false} interval="preserveStartEnd" />
           <YAxis tickFormatter={fmt} tick={{ fontSize: 10, fill: '#64748b' }} tickLine={false} axisLine={false} width={48} />
           <Tooltip content={<CustomTooltip />} />

@@ -1,4 +1,4 @@
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
+import { LineChart, Line, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { ChartCard } from './ChartCard'
 
 const COLORS = ['#e94560','#38bdf8','#a78bfa','#34d399','#fb923c','#f472b6','#facc15','#60a5fa']
@@ -20,7 +20,6 @@ export function ProjectComparisonChart({ data, seriesKeys = [] }) {
     >
       <ResponsiveContainer width="100%" height={260}>
         <LineChart data={data} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
           <XAxis dataKey="month" tick={{ fontSize: 10, fill: '#64748b' }} tickLine={false} interval="preserveStartEnd" />
           <YAxis tickFormatter={fmt} tick={{ fontSize: 10, fill: '#64748b' }} tickLine={false} axisLine={false} width={48} />
           <Tooltip
