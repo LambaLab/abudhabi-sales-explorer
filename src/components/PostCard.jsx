@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { DynamicChart } from './charts/DynamicChart'
 import { ReplyCard }    from './ReplyCard'
 import { buildShareUrl } from '../utils/deeplink'
@@ -28,6 +28,10 @@ function LoadingSkeleton() {
 function ReplyInput({ postId, onSubmit, disabled }) {
   const [open, setOpen]   = useState(false)
   const [value, setValue] = useState('')
+  const textareaRef = useRef(null)
+  useEffect(() => {
+    if (open) textareaRef.current?.focus()
+  }, [open])
 
   function handleSubmit(e) {
     e.preventDefault()
@@ -56,7 +60,7 @@ function ReplyInput({ postId, onSubmit, disabled }) {
       className="flex items-end gap-2 ml-2 pl-3 border-l-2 border-accent/40"
     >
       <textarea
-        autoFocus
+        ref={textareaRef}
         value={value}
         onChange={e => setValue(e.target.value)}
         onKeyDown={e => {
@@ -85,6 +89,11 @@ export function PostCard({ post, onRemove, onReply }) {
   const isStreaming   = post.status === 'explaining'
   const isDone        = post.status === 'done'
   const isError       = post.status === 'error'
+
+  // A reply is "in flight" if any reply does not have status 'done' or 'error'
+  const hasActiveReply = post.replies?.some(
+    r => r.status === 'analyzing' || r.status === 'querying' || r.status === 'explaining'
+  ) ?? false
 
   async function handleShare() {
     try {
@@ -199,7 +208,7 @@ export function PostCard({ post, onRemove, onReply }) {
       {/* ── Inline reply input (only when post is done and onReply provided) ── */}
       {onReply && isDone && (
         <div className="pt-1">
-          <ReplyInput postId={post.id} onSubmit={onReply} />
+          <ReplyInput postId={post.id} onSubmit={onReply} disabled={hasActiveReply} />
         </div>
       )}
     </article>
