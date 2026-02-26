@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { DynamicChart } from './charts/DynamicChart'
 import { ReplyCard }    from './ReplyCard'
 import { buildShareUrl } from '../utils/deeplink'
+import { ThinkingLabel } from './ThinkingLabel'
 
 function Skeleton({ className }) {
   return <div className={`animate-pulse rounded bg-slate-700/50 ${className}`} />
@@ -82,10 +83,10 @@ function ReplyInput({ postId, onSubmit, disabled }) {
   )
 }
 
-export function PostCard({ post, onRemove, onReply }) {
+export function PostCard({ post, onRemove, onReply, isActive, onCancel }) {
   const [copied, setCopied] = useState(false)
 
-  const isBodyLoading = post.status === 'analyzing' || post.status === 'querying'
+  const isBodyLoading = post.status === 'analyzing' || post.status === 'querying' || post.status === 'explaining'
   const isStreaming   = post.status === 'explaining'
   const isDone        = post.status === 'done'
   const isError       = post.status === 'error'
@@ -113,19 +114,30 @@ export function PostCard({ post, onRemove, onReply }) {
   })()
 
   return (
-    <article className="rounded-xl border border-slate-700/60 bg-slate-800/30 p-5 space-y-4">
+    <article className="rounded-xl border border-slate-200 dark:border-slate-700/60 bg-white dark:bg-slate-800/30 p-5 space-y-4 shadow-sm dark:shadow-none">
       {/* ── Header ── */}
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-xs text-slate-500 mb-1">{timeAgo}</p>
-          <h2 className="text-base font-semibold text-white leading-snug">
+          <p className="text-xs text-slate-400 dark:text-slate-500 mb-1">{timeAgo}</p>
+          <h2 className="text-base font-semibold text-slate-900 dark:text-white leading-snug">
             {post.title || post.prompt}
           </h2>
           {post.title && post.title !== post.prompt && (
-            <p className="mt-0.5 text-xs text-slate-500 italic truncate">"{post.prompt}"</p>
+            <p className="mt-0.5 text-xs text-slate-400 dark:text-slate-500 italic truncate">"{post.prompt}"</p>
           )}
         </div>
         <div className="flex items-center gap-1 shrink-0">
+          {isActive && onCancel && (
+            <button
+              onClick={() => onCancel(post.id)}
+              className="rounded-lg p-1.5 text-slate-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-500 transition-colors"
+              title="Cancel analysis"
+            >
+              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"/>
+              </svg>
+            </button>
+          )}
           {isDone && (
             <button
               onClick={handleShare}
@@ -161,11 +173,11 @@ export function PostCard({ post, onRemove, onReply }) {
       {isError ? (
         <p className="text-sm text-red-400">{post.error ?? 'Something went wrong.'}</p>
       ) : isBodyLoading ? (
-        <LoadingSkeleton />
+        <ThinkingLabel />
       ) : (
         <>
           {post.analysisText ? (
-            <div className="text-sm text-slate-300 leading-relaxed space-y-3 whitespace-pre-wrap">
+            <div className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed space-y-3 whitespace-pre-wrap">
               {post.analysisText}
             </div>
           ) : (
