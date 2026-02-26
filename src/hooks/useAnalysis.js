@@ -29,13 +29,20 @@ async function streamExplain(prompt, intent, summaryStats, onChunk, signal) {
   const decoder = new TextDecoder()
   let full = ''
 
-  while (true) {
-    if (signal?.aborted) break
-    const { done, value } = await reader.read()
-    if (done) break
-    const chunk = decoder.decode(value, { stream: true })
-    full += chunk
-    onChunk(chunk)
+  try {
+    while (true) {
+      if (signal?.aborted) {
+        await reader.cancel()
+        break
+      }
+      const { done, value } = await reader.read()
+      if (done) break
+      const chunk = decoder.decode(value, { stream: true })
+      full += chunk
+      onChunk(chunk)
+    }
+  } finally {
+    reader.releaseLock()
   }
   return full
 }
@@ -50,10 +57,15 @@ async function streamExplain(prompt, intent, summaryStats, onChunk, signal) {
 export function useAnalysis(meta, { addPost, patchPost, addReply, patchReply, getPost }) {
   const [activePostId, setActivePostId] = useState(null)
   const abortRef = useRef(null)
+  const mountedRef = useRef(true)
 
   // Cancel any in-flight request on unmount
   useEffect(() => {
-    return () => { abortRef.current?.abort() }
+    mountedRef.current = true
+    return () => {
+      mountedRef.current = false
+      abortRef.current?.abort()
+    }
   }, [])
 
   /**
@@ -117,11 +129,11 @@ export function useAnalysis(meta, { addPost, patchPost, addReply, patchReply, ge
 
       // ── Step 5: finalise ──
       patchPost(postId, { status: 'done', analysisText: fullText })
-      setActivePostId(null)
+      if (mountedRef.current) setActivePostId(null)
     } catch (err) {
       if (err.name === 'AbortError') return
       patchPost(postId, { status: 'error', error: err.message ?? 'Something went wrong' })
-      setActivePostId(null)
+      if (mountedRef.current) setActivePostId(null)
     }
   }, [meta, addPost, patchPost])
 
@@ -173,6 +185,8 @@ export function useAnalysis(meta, { addPost, patchPost, addReply, patchReply, ge
       // ── Step 2: optionally skip DuckDB if Claude says no chart needed ──
       if (intent.chartNeeded !== false) {
         const { sql, params } = intentToQuery(intent)
+        // If no SQL is generated (e.g. unsupported query type), skip silently —
+        // replies are conversational, so streaming text without a chart is fine.
         if (sql) {
           const rawRows = await query(sql, params)
           const pivoted = pivotChartData(rawRows, intent)
@@ -194,11 +208,11 @@ export function useAnalysis(meta, { addPost, patchPost, addReply, patchReply, ge
       if (signal.aborted) return
 
       patchReply(postId, replyId, { status: 'done', analysisText: fullText })
-      setActivePostId(null)
+      if (mountedRef.current) setActivePostId(null)
     } catch (err) {
       if (err.name === 'AbortError') return
       patchReply(postId, replyId, { status: 'error', error: err.message ?? 'Something went wrong' })
-      setActivePostId(null)
+      if (mountedRef.current) setActivePostId(null)
     }
   }, [meta, addReply, patchReply, getPost])
 
