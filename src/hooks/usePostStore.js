@@ -14,7 +14,9 @@ function loadPosts() {
 function savePosts(posts) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(posts))
-  } catch { /* quota exceeded — silently ignore */ }
+  } catch (err) {
+    console.warn('[usePostStore] localStorage write failed:', err)
+  }
 }
 
 export function usePostStore() {
@@ -23,6 +25,9 @@ export function usePostStore() {
   // Append to END — feed is oldest-at-top, newest-at-bottom
   const addPost = useCallback((post) => {
     setPosts(prev => {
+      // Upsert: remove any existing entry with the same id, then append at end.
+      // This ensures in-progress posts can be created once and not duplicated
+      // if addPost is accidentally called twice with the same id.
       const next = [...prev.filter(p => p.id !== post.id), post]
       savePosts(next)
       return next
@@ -37,6 +42,10 @@ export function usePostStore() {
     })
   }, [])
 
+  // NOTE: getPost closes over `posts` and is recreated on every mutation.
+  // This is intentional — it always returns current state. Consumers should
+  // not memoize getPost or pass it to stable callbacks without acknowledging
+  // it changes on every posts update.
   const getPost = useCallback((id) => {
     return posts.find(p => p.id === id)
   }, [posts])
