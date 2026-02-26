@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { DynamicChart } from './charts/DynamicChart'
+import { ReplyCard }    from './ReplyCard'
 import { buildShareUrl } from '../utils/deeplink'
 
 function Skeleton({ className }) {
@@ -23,29 +24,97 @@ function LoadingSkeleton() {
   )
 }
 
-export function PostCard({ post, onRemove }) {
+/** Inline follow-up input that lives at the bottom of each PostCard */
+function ReplyInput({ postId, onSubmit, disabled }) {
+  const [open, setOpen]   = useState(false)
+  const [value, setValue] = useState('')
+  const textareaRef = useRef(null)
+  useEffect(() => {
+    if (open) textareaRef.current?.focus()
+  }, [open])
+
+  function handleSubmit(e) {
+    e.preventDefault()
+    const trimmed = value.trim()
+    if (!trimmed || disabled) return
+    onSubmit(postId, trimmed)
+    setValue('')
+    setOpen(false)
+  }
+
+  if (!open) {
+    return (
+      <button
+        onClick={() => setOpen(true)}
+        disabled={disabled}
+        className="text-xs text-slate-500 hover:text-slate-300 transition-colors flex items-center gap-1 disabled:opacity-30 disabled:cursor-not-allowed"
+      >
+        <span>↳</span> Ask a follow-up
+      </button>
+    )
+  }
+
+  return (
+    <form
+      onSubmit={handleSubmit}
+      className="flex items-end gap-2 ml-2 pl-3 border-l-2 border-accent/40"
+    >
+      <textarea
+        ref={textareaRef}
+        value={value}
+        onChange={e => setValue(e.target.value)}
+        onKeyDown={e => {
+          if (e.key === 'Enter' && !e.shiftKey) handleSubmit(e)
+          if (e.key === 'Escape') { setOpen(false); setValue('') }
+        }}
+        placeholder="Ask a follow-up…"
+        rows={1}
+        className="flex-1 resize-none bg-transparent border-b border-slate-600 text-xs text-slate-200 placeholder-slate-600 focus:outline-none focus:border-slate-400 py-1"
+      />
+      <button
+        type="submit"
+        disabled={!value.trim() || disabled}
+        className="text-xs text-accent disabled:opacity-30 pb-1 hover:opacity-80 transition-opacity"
+      >
+        →
+      </button>
+    </form>
+  )
+}
+
+export function PostCard({ post, onRemove, onReply }) {
   const [copied, setCopied] = useState(false)
 
-  const isLoading = !post.analysisText && post.isStreaming !== false
+  const isBodyLoading = post.status === 'analyzing' || post.status === 'querying'
+  const isStreaming   = post.status === 'explaining'
+  const isDone        = post.status === 'done'
+  const isError       = post.status === 'error'
+
+  // A reply is "in flight" if any reply does not have status 'done' or 'error'
+  const hasActiveReply = post.replies?.some(
+    r => r.status === 'analyzing' || r.status === 'querying' || r.status === 'explaining'
+  ) ?? false
 
   async function handleShare() {
-    const url = buildShareUrl(post)
-    await navigator.clipboard.writeText(url).catch(() => {})
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
+    try {
+      const url = buildShareUrl(post)
+      await navigator.clipboard.writeText(url).catch(() => {})
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch { /* buildShareUrl may throw if post has no id */ }
   }
 
   const timeAgo = (() => {
     const diff = Date.now() - post.createdAt
-    if (diff < 60_000) return 'just now'
-    if (diff < 3_600_000) return `${Math.floor(diff / 60_000)}m ago`
-    if (diff < 86_400_000) return `${Math.floor(diff / 3_600_000)}h ago`
+    if (diff < 60_000)      return 'just now'
+    if (diff < 3_600_000)   return `${Math.floor(diff / 60_000)}m ago`
+    if (diff < 86_400_000)  return `${Math.floor(diff / 3_600_000)}h ago`
     return new Date(post.createdAt).toLocaleDateString()
   })()
 
   return (
     <article className="rounded-xl border border-slate-700/60 bg-slate-800/30 p-5 space-y-4">
-      {/* Header */}
+      {/* ── Header ── */}
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-xs text-slate-500 mb-1">{timeAgo}</p>
@@ -57,22 +126,24 @@ export function PostCard({ post, onRemove }) {
           )}
         </div>
         <div className="flex items-center gap-1 shrink-0">
-          <button
-            onClick={handleShare}
-            className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-700 hover:text-white transition-colors"
-            title="Copy shareable link"
-          >
-            {copied ? (
-              <svg className="h-4 w-4 text-green-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/>
-              </svg>
-            ) : (
-              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/>
-              </svg>
-            )}
-          </button>
-          {onRemove && (
+          {isDone && (
+            <button
+              onClick={handleShare}
+              className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-700 hover:text-white transition-colors"
+              title="Copy shareable link"
+            >
+              {copied ? (
+                <svg className="h-4 w-4 text-green-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/>
+                </svg>
+              ) : (
+                <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/>
+                </svg>
+              )}
+            </button>
+          )}
+          {onRemove && isDone && (
             <button
               onClick={() => onRemove(post.id)}
               className="rounded-lg p-1.5 text-slate-600 hover:bg-slate-700 hover:text-slate-300 transition-colors"
@@ -86,22 +157,22 @@ export function PostCard({ post, onRemove }) {
         </div>
       </div>
 
-      {/* Body */}
-      {isLoading ? (
+      {/* ── Body ── */}
+      {isError ? (
+        <p className="text-sm text-red-400">{post.error ?? 'Something went wrong.'}</p>
+      ) : isBodyLoading ? (
         <LoadingSkeleton />
       ) : (
         <>
-          {/* Analyst text */}
           {post.analysisText ? (
             <div className="text-sm text-slate-300 leading-relaxed space-y-3 whitespace-pre-wrap">
               {post.analysisText}
             </div>
           ) : (
-            <p className="text-sm text-slate-500 italic">No analysis available.</p>
+            !isStreaming && <p className="text-sm text-slate-500 italic">No analysis available.</p>
           )}
 
-          {/* Chart */}
-          {post.chartData?.length > 0 ? (
+          {post.chartData?.length > 0 && (
             <div className="mt-2">
               <DynamicChart
                 intent={post.intent}
@@ -109,14 +180,12 @@ export function PostCard({ post, onRemove }) {
                 chartKeys={post.chartKeys}
               />
             </div>
-          ) : (
-            <p className="text-xs text-slate-600 text-center py-4">No chart data returned.</p>
           )}
         </>
       )}
 
       {/* Streaming indicator */}
-      {post.isStreaming && post.analysisText && (
+      {isStreaming && post.analysisText && (
         <div className="flex items-center gap-2 text-xs text-slate-500">
           <span className="inline-flex gap-0.5">
             <span className="animate-bounce [animation-delay:0ms]">·</span>
@@ -124,6 +193,22 @@ export function PostCard({ post, onRemove }) {
             <span className="animate-bounce [animation-delay:300ms]">·</span>
           </span>
           analysing…
+        </div>
+      )}
+
+      {/* ── Thread: replies ── */}
+      {post.replies?.length > 0 && (
+        <div className="space-y-4 pt-1 border-t border-slate-700/40">
+          {post.replies.map(reply => (
+            <ReplyCard key={reply.id} reply={reply} />
+          ))}
+        </div>
+      )}
+
+      {/* ── Inline reply input (only when post is done and onReply provided) ── */}
+      {onReply && isDone && (
+        <div className="pt-1">
+          <ReplyInput postId={post.id} onSubmit={onReply} disabled={hasActiveReply} />
         </div>
       )}
     </article>
