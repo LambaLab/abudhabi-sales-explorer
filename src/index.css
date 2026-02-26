@@ -24,3 +24,15 @@ body {
 ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
 .dark ::-webkit-scrollbar-track { background: #1a1a2e; }
 .dark ::-webkit-scrollbar-thumb { background: #374151; }
+
+/* Chart tooltip CSS variables — used by Recharts contentStyle */
+:root {
+  --tooltip-bg: #ffffff;
+  --tooltip-border: #e2e8f0;
+  --tooltip-color: #0f172a;
+}
+.dark {
+  --tooltip-bg: #1e293b;
+  --tooltip-border: #334155;
+  --tooltip-color: #f1f5f9;
+}
