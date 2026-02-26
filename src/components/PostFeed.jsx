@@ -1,6 +1,6 @@
 import { PostCard } from './PostCard'
 
-export function PostFeed({ posts, onRemove, onReply, activePostId, onCancel }) {
+export function PostFeed({ posts, onReply, activePostId, onCancel, onDeepAnalysis, chartType }) {
   if (!posts.length) {
     return (
       <div className="py-16 text-center space-y-2">
@@ -16,10 +16,11 @@ export function PostFeed({ posts, onRemove, onReply, activePostId, onCancel }) {
         <PostCard
           key={post.id}
           post={post}
-          onRemove={onRemove}
           onReply={onReply}
           isActive={post.id === activePostId}
           onCancel={onCancel}
+          onDeepAnalysis={onDeepAnalysis}
+          chartType={chartType}
         />
       ))}
     </div>
