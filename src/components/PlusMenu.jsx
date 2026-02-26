@@ -84,6 +84,29 @@ export function PlusMenu({ settings, onSettingsChange }) {
               </div>
             )}
           </div>
+
+          {/* Chart Type */}
+          <div>
+            <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-2 flex items-center gap-1.5">
+              <span>📊</span> Chart Type
+            </p>
+            <div className="flex gap-1">
+              {['bar', 'line'].map(type => (
+                <button
+                  key={type}
+                  type="button"
+                  onClick={() => onSettingsChange({ chartType: type })}
+                  className={`flex-1 py-1.5 rounded-lg text-xs font-medium capitalize transition-colors ${
+                    settings.chartType === type
+                      ? 'bg-accent text-white'
+                      : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
+                  }`}
+                >
+                  {type}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
       )}
     </div>
