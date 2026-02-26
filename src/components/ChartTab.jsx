@@ -76,7 +76,7 @@ function ChartWidget({ queryFn, globalFilters, renderChart, fullWidth }) {
  * Chart tab root. Renders 12 curated charts in a 2-column grid.
  */
 export function ChartTab({ meta, defaultDateRange }) {
-  const { filters, updateFilter } = useChartFilters(defaultDateRange)
+  const { filters, updateFilter, resetFilters } = useChartFilters(defaultDateRange)
 
   const charts = [
     // 1. Avg Price/SQM Over Time
@@ -222,7 +222,7 @@ export function ChartTab({ meta, defaultDateRange }) {
 
   return (
     <div className="px-4 py-4 max-w-6xl mx-auto">
-      <ChartFilterBar filters={filters} updateFilter={updateFilter} meta={meta} />
+      <ChartFilterBar filters={filters} updateFilter={updateFilter} resetFilters={resetFilters} meta={meta} />
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {charts.map((chart, i) => (
