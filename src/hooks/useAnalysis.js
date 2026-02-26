@@ -16,7 +16,7 @@ async function fetchIntent(prompt, meta, signal, context = null) {
   return res.json()
 }
 
-async function streamExplain(prompt, intent, summaryStats, onChunk, signal) {
+async function streamExplain(prompt, intent, summaryStats, signal) {
   const res = await fetch('/api/explain', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -37,9 +37,7 @@ async function streamExplain(prompt, intent, summaryStats, onChunk, signal) {
       }
       const { done, value } = await reader.read()
       if (done) break
-      const chunk = decoder.decode(value, { stream: true })
-      full += chunk
-      onChunk(chunk)
+      full += decoder.decode(value, { stream: true })
     }
   } finally {
     reader.releaseLock()
@@ -118,12 +116,8 @@ export function useAnalysis(meta, { addPost, patchPost, addReply, patchReply, ge
 
       patchPost(postId, { status: 'explaining', chartData, chartKeys })
 
-      // ── Step 4: stream analyst text ──
-      let fullText = ''
-      await streamExplain(prompt, intent, summaryStats, (chunk) => {
-        fullText += chunk
-        patchPost(postId, { analysisText: fullText })
-      }, signal)
+      // ── Step 4: stream analyst text (buffered — shown all at once) ──
+      const fullText = await streamExplain(prompt, intent, summaryStats, signal)
 
       if (signal.aborted) return
 
@@ -198,12 +192,8 @@ export function useAnalysis(meta, { addPost, patchPost, addReply, patchReply, ge
 
       patchReply(postId, replyId, { status: 'explaining', chartData, chartKeys })
 
-      // ── Step 3: stream reply text ──
-      let fullText = ''
-      await streamExplain(prompt, intent, summaryStats, (chunk) => {
-        fullText += chunk
-        patchReply(postId, replyId, { analysisText: fullText })
-      }, signal)
+      // ── Step 3: stream reply text (buffered — shown all at once) ──
+      const fullText = await streamExplain(prompt, intent, summaryStats, signal)
 
       if (signal.aborted) return
 
@@ -220,5 +210,9 @@ export function useAnalysis(meta, { addPost, patchPost, addReply, patchReply, ge
     }
   }, [meta, addReply, patchReply, getPost])
 
-  return { analyze, analyzeReply, activePostId }
+  const cancel = useCallback(() => {
+    abortRef.current?.abort()
+  }, [])
+
+  return { analyze, analyzeReply, activePostId, cancel }
 }
