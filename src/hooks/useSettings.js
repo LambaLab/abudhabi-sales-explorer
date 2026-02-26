@@ -14,6 +14,7 @@ const DEFAULTS = {
   defaultDateRange: '12m',
   customFrom: '',
   customTo: '',
+  chartType: 'bar',
 }
 
 function load() {
