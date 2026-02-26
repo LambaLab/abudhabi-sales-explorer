@@ -210,7 +210,11 @@ export function useAnalysis(meta, { addPost, patchPost, addReply, patchReply, ge
       patchReply(postId, replyId, { status: 'done', analysisText: fullText })
       if (mountedRef.current) setActivePostId(null)
     } catch (err) {
-      if (err.name === 'AbortError') return
+      if (err.name === 'AbortError') {
+        // Patch to error rather than leaving the reply frozen at 'explaining'
+        patchReply(postId, replyId, { status: 'error', error: 'Interrupted' })
+        return
+      }
       patchReply(postId, replyId, { status: 'error', error: err.message ?? 'Something went wrong' })
       if (mountedRef.current) setActivePostId(null)
     }
