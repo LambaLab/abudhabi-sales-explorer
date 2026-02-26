@@ -24,13 +24,31 @@ function presetToDates(key) {
  * `value` = { dateFrom: 'YYYY-MM', dateTo: 'YYYY-MM' }
  */
 export function InlineDateRange({ value, onChange }) {
-  const [preset, setPreset]   = useState('all')
-  const [custom, setCustom]   = useState({ dateFrom: '', dateTo: '' })
+  const [preset, setPreset] = useState(() => {
+    if (!value?.dateFrom && !value?.dateTo) return 'all'
+    // try to match a known preset
+    const now   = new Date()
+    const toStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+    if (value.dateTo === toStr || !value.dateTo) {
+      for (const p of PRESETS.filter(x => x.months)) {
+        const { dateFrom } = presetToDates(p.key)
+        if (dateFrom === value.dateFrom) return p.key
+      }
+    }
+    return 'custom'
+  })
+  const [custom, setCustom] = useState(() =>
+    (!value?.dateFrom && !value?.dateTo)
+      ? { dateFrom: '', dateTo: '' }
+      : { dateFrom: value.dateFrom ?? '', dateTo: value.dateTo ?? '' }
+  )
 
   function handlePreset(key) {
     setPreset(key)
     if (key !== 'custom') {
       onChange(presetToDates(key))
+    } else {
+      onChange({ dateFrom: '', dateTo: '' })
     }
   }
 
