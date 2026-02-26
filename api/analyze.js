@@ -30,7 +30,7 @@ export default async function handler(req) {
     return new Response(JSON.stringify({ error: 'Invalid JSON body' }), { status: 400, headers: { 'Content-Type': 'application/json' } })
   }
 
-  const { prompt, meta } = body
+  const { prompt, meta, context } = body
   if (!prompt || !meta) {
     return new Response(JSON.stringify({ error: 'Missing prompt or meta' }), { status: 400, headers: { 'Content-Type': 'application/json' } })
   }
@@ -66,12 +66,25 @@ Return ONLY this JSON structure (no markdown, no explanation):
   "title": "<max 60 chars>"
 }`
 
+  const contextNote = context
+    ? `\n\nThis is a FOLLOW-UP question to an existing analysis.
+Previous question: "${context.parentPrompt}"
+Previous analysis title: "${context.parentTitle}"
+Context from previous analysis: "${context.parentAnalysis}"
+
+IMPORTANT: Add a "chartNeeded" field to your JSON response.
+Set chartNeeded: false if this follow-up can be answered from the context above without running a new data query.
+Set chartNeeded: true if a new chart/data query would meaningfully help answer the question.`
+    : ''
+
+  const fullUserMessage = userMessage + contextNote
+
   try {
     const message = await anthropic.messages.create({
       model: 'claude-opus-4-5',
       max_tokens: 512,
       system: SYSTEM_PROMPT,
-      messages: [{ role: 'user', content: userMessage }],
+      messages: [{ role: 'user', content: fullUserMessage }],
     })
 
     const text = message.content[0]?.text ?? ''
