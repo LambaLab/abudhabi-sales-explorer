@@ -16,11 +16,11 @@ async function fetchIntent(prompt, meta, signal, context = null) {
   return res.json()
 }
 
-async function streamExplain(prompt, intent, summaryStats, signal) {
+async function streamExplain(prompt, intent, summaryStats, signal, mode = 'full') {
   const res = await fetch('/api/explain', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ prompt, intent, summaryStats }),
+    body: JSON.stringify({ prompt, intent, summaryStats, mode }),
     signal,
   })
   if (!res.ok) throw new Error(`Explain API error: ${res.status}`)
@@ -116,13 +116,20 @@ export function useAnalysis(meta, { addPost, patchPost, addReply, patchReply, ge
 
       patchPost(postId, { status: 'explaining', chartData, chartKeys })
 
-      // ── Step 4: stream analyst text (buffered — shown all at once) ──
-      const fullText = await streamExplain(prompt, intent, summaryStats, signal)
+      // ── Step 4: stream analyst text (short mode for initial summary) ──
+      const shortText = await streamExplain(prompt, intent, summaryStats, signal, 'short')
 
       if (signal.aborted) return
 
       // ── Step 5: finalise ──
-      patchPost(postId, { status: 'done', analysisText: fullText })
+      patchPost(postId, {
+        status: 'done',
+        analysisText: shortText,   // compat alias
+        shortText,
+        summaryStats,              // stored for analyzeDeep
+        fullText: null,
+        isExpanded: false,
+      })
       if (mountedRef.current) setActivePostId(null)
     } catch (err) {
       if (err.name === 'AbortError') return
@@ -130,6 +137,47 @@ export function useAnalysis(meta, { addPost, patchPost, addReply, patchReply, ge
       if (mountedRef.current) setActivePostId(null)
     }
   }, [meta, addPost, patchPost])
+
+  /**
+   * Fetch the full analysis for an already-completed post.
+   * If fullText already exists, just toggle isExpanded.
+   * Otherwise stream mode:'full' and store the result.
+   */
+  const analyzeDeep = useCallback(async (postId) => {
+    const post = getPost(postId)
+    if (!post) return
+
+    // Already fetched — just expand
+    if (post.fullText) {
+      patchPost(postId, { isExpanded: !post.isExpanded })
+      return
+    }
+
+    abortRef.current?.abort()
+    const controller = new AbortController()
+    abortRef.current = controller
+    const { signal } = controller
+
+    setActivePostId(postId)
+    patchPost(postId, { status: 'deepening' })
+
+    try {
+      const fullText = await streamExplain(
+        post.prompt,
+        post.intent,
+        post.summaryStats,
+        signal,
+        'full'
+      )
+      if (signal.aborted) return
+      patchPost(postId, { status: 'done', fullText, isExpanded: true })
+    } catch (err) {
+      if (err.name === 'AbortError') return
+      patchPost(postId, { status: 'done' }) // revert — short text still visible
+    } finally {
+      if (mountedRef.current) setActivePostId(null)
+    }
+  }, [getPost, patchPost])
 
   /**
    * Run a follow-up analysis inside a post's thread.
@@ -214,5 +262,5 @@ export function useAnalysis(meta, { addPost, patchPost, addReply, patchReply, ge
     abortRef.current?.abort()
   }, [])
 
-  return { analyze, analyzeReply, activePostId, cancel }
+  return { analyze, analyzeReply, analyzeDeep, activePostId, cancel }
 }
