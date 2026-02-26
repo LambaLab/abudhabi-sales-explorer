@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { useDuckDB }    from './hooks/useDuckDB'
 import { useAppData }   from './hooks/useAppData'
 import { useAnalysis }  from './hooks/useAnalysis'
@@ -12,23 +12,35 @@ import { parseShareUrl } from './utils/deeplink'
 export default function App() {
   const { ready, error: dbError } = useDuckDB()
   const { meta }                  = useAppData(ready)
-  const { posts, addPost, removePost, getPost } = usePostStore()
-  const { analyze, status, error: analysisError, pendingPost } = useAnalysis(meta)
 
-  const isLoading = ['analyzing', 'querying', 'explaining'].includes(status)
+  const store = usePostStore()
+  const { posts, addPost, removePost, getPost, patchPost, addReply, patchReply } = store
+
+  const { analyze, analyzeReply, activePostId } = useAnalysis(meta, {
+    addPost, patchPost, addReply, patchReply, getPost,
+  })
+
+  const isLoading  = activePostId !== null
+  const feedEndRef = useRef(null)
+  const prevCount  = useRef(posts.length)
+
+  // Auto-scroll to bottom when a new top-level post is added
+  useEffect(() => {
+    if (posts.length > prevCount.current) {
+      feedEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+    }
+    prevCount.current = posts.length
+  }, [posts.length])
 
   // Handle deeplink: if URL has ?post=... show that single post
   const { postId, post: urlPost } = parseShareUrl()
   const deeplinkPost = postId ? (getPost(postId) ?? urlPost) : null
 
-  // If we landed on a deeplink and the post isn't in localStorage yet, save it
   useEffect(() => {
-    if (urlPost && !getPost(urlPost.id)) {
-      addPost(urlPost)
-    }
-  }, []) // run once on mount
+    if (urlPost && !getPost(urlPost.id)) addPost(urlPost)
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Deeplink view: show single post
+  // ── Deeplink view ──────────────────────────────────────────────────────────
   if (deeplinkPost) {
     return (
       <div className="min-h-screen bg-[#0f172a] text-slate-100">
@@ -50,43 +62,49 @@ export default function App() {
     )
   }
 
-  // Main view
+  // ── Main view: h-screen flex column ───────────────────────────────────────
   return (
-    <div className="min-h-screen bg-[#0f172a] text-slate-100">
-      {/* Header */}
-      <header className="border-b border-slate-800 px-6 py-4 sticky top-0 z-10 backdrop-blur bg-[#0f172a]/90">
+    <div className="h-screen flex flex-col bg-[#0f172a] text-slate-100 overflow-hidden">
+
+      {/* ── Sticky header ── */}
+      <header className="shrink-0 border-b border-slate-800 px-6 py-3 backdrop-blur bg-[#0f172a]/95 z-10">
         <div className="mx-auto max-w-2xl flex items-center justify-between">
           <div>
-            <h1 className="text-lg font-bold text-white">Abu Dhabi Sales Explorer</h1>
+            <h1 className="text-base font-bold text-white">Abu Dhabi Sales Explorer</h1>
             <p className="text-xs text-slate-500 mt-0.5">104,848 transactions · 2019–2026</p>
           </div>
-          {dbError && (
-            <span className="text-xs text-red-400">DB error: {dbError}</span>
-          )}
-          {!ready && !dbError && (
-            <span className="text-xs text-slate-500 animate-pulse">Loading data…</span>
-          )}
+          <div className="flex items-center gap-3">
+            {dbError && (
+              <span className="text-xs text-red-400">DB error: {dbError}</span>
+            )}
+            {!ready && !dbError && (
+              <span className="text-xs text-slate-500 animate-pulse">Loading data…</span>
+            )}
+          </div>
         </div>
       </header>
 
-      {/* Chat area */}
-      <main className="mx-auto max-w-2xl px-6 py-6 space-y-6">
-        {/* Input section */}
-        <section className="space-y-3">
-          <SmartTopics onSelect={analyze} isLoading={isLoading || !ready} />
-          <ChatInput onSubmit={analyze} isLoading={isLoading || !ready} />
-          {analysisError && (
-            <p className="text-xs text-red-400 px-1">{analysisError}</p>
-          )}
-        </section>
-
-        {/* Post feed */}
-        <PostFeed
-          posts={posts}
-          pendingPost={pendingPost}
-          onRemove={removePost}
-        />
+      {/* ── Scrollable feed (oldest at top → newest at bottom) ── */}
+      <main className="flex-1 overflow-y-auto">
+        <div className="mx-auto max-w-2xl px-4 py-4 space-y-4">
+          <PostFeed
+            posts={posts}
+            onRemove={removePost}
+            onReply={(postId, prompt) => analyzeReply(postId, prompt)}
+          />
+          {/* Sentinel element — scrolled into view when a new post is added */}
+          <div ref={feedEndRef} />
+        </div>
       </main>
+
+      {/* ── Sticky bottom input bar ── */}
+      <div className="shrink-0 border-t border-slate-800 bg-[#0f172a]/95 backdrop-blur px-4 py-3 z-10">
+        <div className="mx-auto max-w-2xl space-y-2">
+          <SmartTopics onSelect={analyze} isLoading={isLoading || !ready} />
+          <ChatInput   onSubmit={analyze} isLoading={isLoading || !ready} />
+        </div>
+      </div>
+
     </div>
   )
 }
