@@ -1,17 +1,12 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { query } from '../utils/db'
 import { intentToQuery, pivotChartData, computeSummaryStats } from '../utils/intentToQuery'
-import { usePostStore } from './usePostStore'
 
-function uuid() {
-  return crypto.randomUUID()
-}
-
-async function fetchIntent(prompt, meta, signal) {
+async function fetchIntent(prompt, meta, signal, context = null) {
   const res = await fetch('/api/analyze', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ prompt, meta }),
+    body: JSON.stringify({ prompt, meta, ...(context ? { context } : {}) }),
     signal,
   })
   if (!res.ok) {
@@ -45,11 +40,15 @@ async function streamExplain(prompt, intent, summaryStats, onChunk, signal) {
   return full
 }
 
-export function useAnalysis(meta) {
-  const { addPost } = usePostStore()
-  const [status, setStatus]   = useState('idle')   // idle | analyzing | querying | explaining | done | error
-  const [error, setError]     = useState(null)
-  const [pendingPost, setPendingPost] = useState(null)
+/**
+ * useAnalysis — drives the full analysis pipeline, writing every stage
+ * directly into the shared usePostStore via the store functions passed in.
+ *
+ * @param {object|null} meta  — DuckDB metadata (projects, districts, etc.)
+ * @param {object}      store — { addPost, patchPost, addReply, patchReply, getPost }
+ */
+export function useAnalysis(meta, { addPost, patchPost, addReply, patchReply, getPost }) {
+  const [activePostId, setActivePostId] = useState(null)
   const abortRef = useRef(null)
 
   // Cancel any in-flight request on unmount
@@ -57,79 +56,151 @@ export function useAnalysis(meta) {
     return () => { abortRef.current?.abort() }
   }, [])
 
+  /**
+   * Run a new top-level analysis for `prompt`.
+   * Creates a post in the store immediately (status: 'analyzing'),
+   * then patches it through each pipeline stage — no separate pendingPost.
+   */
   const analyze = useCallback(async (prompt) => {
     if (!meta) return
 
-    // Cancel any prior in-flight run (double-submit guard)
     abortRef.current?.abort()
     const controller = new AbortController()
     abortRef.current = controller
     const { signal } = controller
 
-    setStatus('analyzing')
-    setError(null)
-    setPendingPost(null)
+    const postId = crypto.randomUUID()
+    setActivePostId(postId)
+
+    // ── Step 1: insert placeholder post immediately (fixes the flicker bug) ──
+    addPost({
+      id:           postId,
+      createdAt:    Date.now(),
+      prompt,
+      title:        prompt.slice(0, 60),
+      status:       'analyzing',
+      error:        null,
+      analysisText: '',
+      intent:       null,
+      chartData:    null,
+      chartKeys:    null,
+      replies:      [],
+    })
 
     try {
-      // Step 1: Get intent from Claude
+      // ── Step 2: intent from Claude ──
       const intent = await fetchIntent(prompt, meta, signal)
+      patchPost(postId, {
+        status: 'querying',
+        intent,
+        title: intent.title ?? prompt.slice(0, 60),
+      })
 
-      setStatus('querying')
-
-      // Step 2: Run DuckDB query
+      // ── Step 3: DuckDB query ──
       const { sql, params } = intentToQuery(intent)
       if (!sql) throw new Error('No SQL generated for this query type')
       const rawRows = await query(sql, params)
 
-      // Step 3: Pivot data for chart + compute summary stats
       const { chartData, chartKeys } = pivotChartData(rawRows, intent)
       const summaryStats = computeSummaryStats(rawRows, intent)
 
-      // Step 4: Stream analyst text from Claude
-      setStatus('explaining')
-      const postId = uuid()
-      // Create a placeholder post that the UI shows while text streams in
-      const placeholder = {
-        id:           postId,
-        createdAt:    Date.now(),
-        prompt,
-        title:        intent.title ?? prompt.slice(0, 60),
-        analysisText: '',
-        intent,
-        chartData,
-        chartKeys,
-        isStreaming:  true,
-      }
-      setPendingPost(placeholder)
+      patchPost(postId, { status: 'explaining', chartData, chartKeys })
 
+      // ── Step 4: stream analyst text ──
       let fullText = ''
       await streamExplain(prompt, intent, summaryStats, (chunk) => {
         fullText += chunk
-        setPendingPost(prev => prev ? { ...prev, analysisText: fullText } : prev)
+        patchPost(postId, { analysisText: fullText })
       }, signal)
 
-      // If aborted, don't save the post
       if (signal.aborted) return
 
-      // Step 5: Finalise post
-      const finalPost = { ...placeholder, analysisText: fullText, isStreaming: false }
-      setPendingPost(null)
-      addPost(finalPost)
-      setStatus('done')
+      // ── Step 5: finalise ──
+      patchPost(postId, { status: 'done', analysisText: fullText })
+      setActivePostId(null)
     } catch (err) {
-      // Ignore abort errors — they're expected when user navigates away or re-submits
       if (err.name === 'AbortError') return
-      setError(err.message ?? 'Something went wrong')
-      setStatus('error')
-      setPendingPost(null)
+      patchPost(postId, { status: 'error', error: err.message ?? 'Something went wrong' })
+      setActivePostId(null)
     }
-  }, [meta, addPost])
+  }, [meta, addPost, patchPost])
 
-  const reset = useCallback(() => {
-    setStatus('idle')
-    setError(null)
-    setPendingPost(null)
-  }, [])
+  /**
+   * Run a follow-up analysis inside a post's thread.
+   * Passes the parent post's context to Claude so it can decide
+   * whether a new chart is needed (chartNeeded: true/false).
+   */
+  const analyzeReply = useCallback(async (postId, prompt) => {
+    if (!meta) return
 
-  return { analyze, status, error, pendingPost, reset }
+    abortRef.current?.abort()
+    const controller = new AbortController()
+    abortRef.current = controller
+    const { signal } = controller
+
+    const replyId = crypto.randomUUID()
+    setActivePostId(postId)  // marks this post as "has active work"
+
+    // Build parent context for Claude
+    const parent = getPost(postId)
+    const context = parent ? {
+      parentPrompt:   parent.prompt,
+      parentTitle:    parent.title,
+      parentAnalysis: (parent.analysisText ?? '').slice(0, 500),
+    } : null
+
+    addReply(postId, {
+      id:           replyId,
+      createdAt:    Date.now(),
+      prompt,
+      status:       'analyzing',
+      error:        null,
+      analysisText: '',
+      intent:       null,
+      chartData:    null,
+      chartKeys:    null,
+    })
+
+    try {
+      // ── Step 1: intent (with parent context) ──
+      const intent = await fetchIntent(prompt, meta, signal, context)
+      patchReply(postId, replyId, { status: 'querying', intent })
+
+      let chartData    = null
+      let chartKeys    = null
+      let summaryStats = {}
+
+      // ── Step 2: optionally skip DuckDB if Claude says no chart needed ──
+      if (intent.chartNeeded !== false) {
+        const { sql, params } = intentToQuery(intent)
+        if (sql) {
+          const rawRows = await query(sql, params)
+          const pivoted = pivotChartData(rawRows, intent)
+          chartData    = pivoted.chartData
+          chartKeys    = pivoted.chartKeys
+          summaryStats = computeSummaryStats(rawRows, intent)
+        }
+      }
+
+      patchReply(postId, replyId, { status: 'explaining', chartData, chartKeys })
+
+      // ── Step 3: stream reply text ──
+      let fullText = ''
+      await streamExplain(prompt, intent, summaryStats, (chunk) => {
+        fullText += chunk
+        patchReply(postId, replyId, { analysisText: fullText })
+      }, signal)
+
+      if (signal.aborted) return
+
+      patchReply(postId, replyId, { status: 'done', analysisText: fullText })
+      setActivePostId(null)
+    } catch (err) {
+      if (err.name === 'AbortError') return
+      patchReply(postId, replyId, { status: 'error', error: err.message ?? 'Something went wrong' })
+      setActivePostId(null)
+    }
+  }, [meta, addReply, patchReply, getPost])
+
+  return { analyze, analyzeReply, activePostId }
 }
