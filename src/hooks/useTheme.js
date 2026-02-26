@@ -7,7 +7,7 @@ import { useState, useEffect } from 'react'
  */
 export function useTheme() {
   const [theme, setTheme] = useState(() => {
-    return localStorage.getItem('theme') ?? 'light'
+    try { return localStorage.getItem('theme') ?? 'light' } catch { return 'light' }
   })
 
   useEffect(() => {
