@@ -58,6 +58,14 @@ describe('usePostStore — removePost', () => {
     act(() => result.current.removePost('p1'))
     expect(result.current.posts).toHaveLength(0)
   })
+
+  it('removes the item from localStorage', () => {
+    const { result } = renderHook(() => usePostStore())
+    act(() => result.current.addPost(makePost()))
+    act(() => result.current.removePost('p1'))
+    const stored = JSON.parse(localStorage.getItem('ad_posts_v2'))
+    expect(stored.find(p => p.id === 'p1')).toBeUndefined()
+  })
 })
 
 describe('usePostStore — getPost', () => {
@@ -109,6 +117,16 @@ describe('usePostStore — addReply', () => {
     act(() => result.current.addReply('a', { id: 'r1', prompt: 'q' }))
     expect(result.current.getPost('b').replies).toHaveLength(0)
   })
+
+  it('persists the reply to localStorage', () => {
+    const { result } = renderHook(() => usePostStore())
+    act(() => result.current.addPost(makePost()))
+    act(() => result.current.addReply('p1', { id: 'r1', prompt: 'follow-up', status: 'analyzing' }))
+    const stored = JSON.parse(localStorage.getItem('ad_posts_v2'))
+    const storedPost = stored.find(p => p.id === 'p1')
+    expect(storedPost.replies).toHaveLength(1)
+    expect(storedPost.replies[0].id).toBe('r1')
+  })
 })
 
 describe('usePostStore — patchReply', () => {
@@ -120,5 +138,16 @@ describe('usePostStore — patchReply', () => {
     const reply = result.current.getPost('p1').replies[0]
     expect(reply.status).toBe('done')
     expect(reply.analysisText).toBe('reply text')
+  })
+
+  it('persists the patched reply fields to localStorage', () => {
+    const { result } = renderHook(() => usePostStore())
+    act(() => result.current.addPost(makePost()))
+    act(() => result.current.addReply('p1', { id: 'r1', status: 'analyzing', analysisText: '' }))
+    act(() => result.current.patchReply('p1', 'r1', { status: 'done', analysisText: 'reply text' }))
+    const stored = JSON.parse(localStorage.getItem('ad_posts_v2'))
+    const storedReply = stored.find(p => p.id === 'p1').replies[0]
+    expect(storedReply.status).toBe('done')
+    expect(storedReply.analysisText).toBe('reply text')
   })
 })
