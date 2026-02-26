@@ -4,7 +4,11 @@ export const config = { runtime: 'edge' }
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
-const SYSTEM_PROMPT = `You are a real estate market analyst specializing in Abu Dhabi property.
+const SHORT_PROMPT = `You are a real estate market analyst specializing in Abu Dhabi property.
+Write exactly 2-3 sentences summarizing the single most important insight with specific AED numbers.
+No headers, no bullets, flowing prose only.`
+
+const FULL_PROMPT = `You are a real estate market analyst specializing in Abu Dhabi property.
 Write clear, accessible analysis for sophisticated investors.
 Rules:
 - Write exactly 2-3 paragraphs of flowing prose — NO headers, NO bullet points, NO markdown
@@ -19,18 +23,22 @@ export default async function handler(req) {
     return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405, headers: { 'Content-Type': 'application/json' } })
   }
 
-  let prompt, intent, summaryStats
+  let prompt, intent, summaryStats, mode
   try {
     const body = await req.json()
-    prompt = body.prompt
-    intent = body.intent
+    prompt       = body.prompt
+    intent       = body.intent
     summaryStats = body.summaryStats
+    mode         = body.mode ?? 'full'
   } catch {
     return new Response(JSON.stringify({ error: 'Invalid JSON body' }), { status: 400, headers: { 'Content-Type': 'application/json' } })
   }
   if (!prompt || !intent || !summaryStats) {
     return new Response(JSON.stringify({ error: 'Missing required fields: prompt, intent, summaryStats' }), { status: 400, headers: { 'Content-Type': 'application/json' } })
   }
+
+  const systemPrompt = mode === 'short' ? SHORT_PROMPT : FULL_PROMPT
+  const maxTokens    = mode === 'short' ? 150 : 600
 
   const userMessage = `Original question: "${prompt}"
 
@@ -44,8 +52,8 @@ Write the analyst commentary now.`
 
   const stream = anthropic.messages.stream({
     model: 'claude-opus-4-5',
-    max_tokens: 600,
-    system: SYSTEM_PROMPT,
+    max_tokens: maxTokens,
+    system: systemPrompt,
     messages: [{ role: 'user', content: userMessage }],
   })
 
@@ -65,8 +73,6 @@ Write the analyst commentary now.`
   })
 
   return new Response(readable, {
-    headers: {
-      'Content-Type': 'text/plain; charset=utf-8',
-    },
+    headers: { 'Content-Type': 'text/plain; charset=utf-8' },
   })
 }
