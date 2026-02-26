@@ -11,6 +11,7 @@ import { useState, useCallback } from 'react'
  *   projects:  string[]
  *   propertyTypes: string[]
  *   layouts:  string[]
+ *   saleTypes: string[]
  */
 export function useChartFilters(defaultDateRange = '12m') {
   const getDefaultDates = () => {
@@ -29,6 +30,7 @@ export function useChartFilters(defaultDateRange = '12m') {
     projects:      [],
     propertyTypes: [],
     layouts:       [],
+    saleTypes:     [],
   }))
 
   const updateFilter = useCallback((key, value) => {
@@ -37,7 +39,7 @@ export function useChartFilters(defaultDateRange = '12m') {
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const resetFilters = useCallback(() => {
-    setFilters({ ...getDefaultDates(), districts: [], projects: [], propertyTypes: [], layouts: [] })
+    setFilters({ ...getDefaultDates(), districts: [], projects: [], propertyTypes: [], layouts: [], saleTypes: [] })
   }, [defaultDateRange])
 
   return { filters, updateFilter, resetFilters }

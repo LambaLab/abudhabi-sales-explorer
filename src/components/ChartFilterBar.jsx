@@ -30,7 +30,8 @@ function pillClass(active) {
 function hasActiveFilters(filters, datePreset) {
   return (
     datePreset !== 'all' ||
-    !!(filters.districts?.length  ||
+    !!(filters.dateFrom || filters.dateTo ||
+       filters.districts?.length  ||
        filters.projects?.length   ||
        filters.propertyTypes?.length ||
        filters.layouts?.length    ||
@@ -43,7 +44,18 @@ function hasActiveFilters(filters, datePreset) {
  * Horizontally scrollable on small screens.
  */
 export function ChartFilterBar({ filters, updateFilter, resetFilters, meta }) {
-  const [datePreset, setDatePreset] = useState('all')
+  const [datePreset, setDatePreset] = useState(() => {
+    if (!filters?.dateFrom && !filters?.dateTo) return 'all'
+    const now   = new Date()
+    const toStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+    if (filters.dateTo === toStr || !filters.dateTo) {
+      for (const p of DATE_PRESETS.filter(x => x.months)) {
+        const { dateFrom } = presetToDates(p.key)
+        if (dateFrom === filters.dateFrom) return p.key
+      }
+    }
+    return 'all'
+  })
 
   function handleDatePreset(key) {
     setDatePreset(key)

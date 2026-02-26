@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { useChartData }    from '../hooks/useChartData'
 import { useChartFilters } from '../hooks/useChartFilters'
 import { ChartFilterBar }  from './ChartFilterBar'
-import { InlineDateRange } from './charts/InlineDateRange'
 
 import { MedianPriceChart }      from './charts/MedianPriceChart'
 import { PricePerSqmChart }      from './charts/PricePerSqmChart'
