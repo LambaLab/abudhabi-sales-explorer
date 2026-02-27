@@ -140,3 +140,26 @@ describe('buildProjectVolumeQuery', () => {
     expect(sql).toContain('LIMIT 20')
   })
 })
+
+describe('buildWhereClause — projects filter', () => {
+  it('includes project_name IN clause when projects provided', () => {
+    const { where, params } = buildWhereClause({ projects: ['Noya', 'Reem Hills'] })
+    expect(where).toContain('project_name IN')
+    expect(params).toContain('Noya')
+    expect(params).toContain('Reem Hills')
+  })
+
+  it('excludes project_name clause when projects is empty', () => {
+    const { where, params } = buildWhereClause({ projects: [] })
+    expect(where).not.toContain('project_name')
+    expect(params).toHaveLength(0)
+  })
+
+  it('combines project filter with other filters', () => {
+    const { where, params } = buildWhereClause({ projects: ['Noya'], layouts: ['4 Bedroom'] })
+    expect(where).toContain('project_name IN')
+    expect(where).toContain('layout IN')
+    expect(params).toContain('Noya')
+    expect(params).toContain('4 Bedroom')
+  })
+})

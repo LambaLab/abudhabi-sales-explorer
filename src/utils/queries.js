@@ -29,7 +29,7 @@ export function buildWhereClause(filters = {}) {
   const conditions = []
   const params = []
 
-  const { dateFrom, dateTo, districts, propertyTypes, layouts, saleTypes, saleSequences, priceMin, priceMax } = filters
+  const { dateFrom, dateTo, districts, projects, propertyTypes, layouts, saleTypes, saleSequences, priceMin, priceMax } = filters
 
   if (dateFrom) { conditions.push('sale_date >= ?'); params.push(normDateStart(dateFrom)) }
   if (dateTo)   { conditions.push('sale_date <= ?'); params.push(normDateEnd(dateTo)) }
@@ -37,6 +37,11 @@ export function buildWhereClause(filters = {}) {
   if (districts?.length) {
     conditions.push(`district IN (${districts.map(() => '?').join(',')})`)
     params.push(...districts)
+  }
+
+  if (projects?.length) {
+    conditions.push(`project_name IN (${projects.map(() => '?').join(',')})`)
+    params.push(...projects)
   }
 
   if (propertyTypes?.length) {
