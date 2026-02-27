@@ -42,6 +42,8 @@ function loadEnvIntoProcess() {
 
 loadEnvIntoProcess()
 
+const pkg = JSON.parse(readFileSync(resolve(PROJECT_ROOT, 'package.json'), 'utf8'))
+
 /**
  * Vite plugin that handles /api/* routes in the dev server.
  * Replaces `vercel dev` — Edge Function handlers in /api/*.js are
@@ -125,6 +127,9 @@ function apiDevPlugin() {
 }
 
 export default defineConfig({
+  define: {
+    __APP_VERSION__: JSON.stringify(pkg.version),
+  },
   plugins: [react(), tailwindcss(), apiDevPlugin()],
   optimizeDeps: {
     exclude: ['@duckdb/duckdb-wasm'],

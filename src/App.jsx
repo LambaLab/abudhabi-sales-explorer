@@ -1,3 +1,4 @@
+/* global __APP_VERSION__ */
 import { useEffect, useRef, useState } from 'react'
 import { useDuckDB }    from './hooks/useDuckDB'
 import { useAppData }   from './hooks/useAppData'
@@ -117,10 +118,14 @@ export default function App() {
             ))}
           </div>
 
-          {/* Theme toggle */}
+          {/* Version + Theme toggle */}
+          <div className="shrink-0 flex items-center gap-2">
+          <span className="text-xs text-slate-400 dark:text-slate-500 font-mono hidden sm:inline select-none">
+            v {__APP_VERSION__}
+          </span>
           <button
             onClick={toggleTheme}
-            className="shrink-0 flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
+            className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
             aria-label="Toggle theme"
           >
             {theme === 'light' ? (
@@ -134,6 +139,7 @@ export default function App() {
               </svg>
             )}
           </button>
+          </div>
         </div>
       </header>
 
