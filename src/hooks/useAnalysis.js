@@ -222,7 +222,9 @@ export function useAnalysis(meta, { addPost, patchPost, addReply, patchReply, ge
 
       let chartData    = null
       let chartKeys    = null
-      let summaryStats = {}
+      // Seed from parent so conversational replies can reference parent's data.
+      // Overridden below only if a fresh query returns rows.
+      let summaryStats = parent?.summaryStats ?? {}
 
       // ── Step 2: optionally skip DuckDB if Claude says no chart needed ──
       if (intent.chartNeeded !== false) {
@@ -234,7 +236,10 @@ export function useAnalysis(meta, { addPost, patchPost, addReply, patchReply, ge
           const pivoted = pivotChartData(rawRows, intent)
           chartData    = pivoted.chartData
           chartKeys    = pivoted.chartKeys
-          summaryStats = computeSummaryStats(rawRows, intent)
+          // Only override parent stats if new query actually returned data.
+          if (rawRows.length > 0) {
+            summaryStats = computeSummaryStats(rawRows, intent)
+          }
         }
       }
 
