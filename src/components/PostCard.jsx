@@ -142,7 +142,9 @@ export function PostCard({ post, onReply, isActive, onCancel, onDeepAnalysis, ch
             {post.title || post.prompt}
           </h2>
           {post.title && post.title !== post.prompt && (
-            <p className="mt-0.5 text-xs text-slate-400 dark:text-slate-500 italic truncate">"{post.prompt}"</p>
+            <div className="mt-1.5 rounded-lg bg-slate-50 dark:bg-slate-800/40 border-l-2 border-accent px-3 py-2">
+              <p className="text-sm text-slate-500 dark:text-slate-400 leading-snug">"{post.prompt}"</p>
+            </div>
           )}
         </div>
         <div className="flex items-center gap-1 shrink-0">
