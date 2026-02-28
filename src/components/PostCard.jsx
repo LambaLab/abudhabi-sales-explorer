@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { DynamicChart }    from './charts/DynamicChart'
-import { InlineDateRange } from './charts/InlineDateRange'
+import { DateRangePickerPopover } from './DateRangePickerPopover'
 import { ReplyCard }       from './ReplyCard'
 import { buildShareUrl }   from '../utils/deeplink'
 import { ThinkingLabel }   from './ThinkingLabel'
@@ -252,7 +252,7 @@ export function PostCard({ post, onReply, isActive, onCancel, onDeepAnalysis, ch
           {post.chartData?.length > 0 && (
             <div className="mt-2 space-y-2">
               <div className="flex justify-end">
-                <InlineDateRange value={dateRange} onChange={setDateRange} />
+                <DateRangePickerPopover value={dateRange} onChange={setDateRange} align="right" />
               </div>
               <DynamicChart
                 intent={post.intent}
