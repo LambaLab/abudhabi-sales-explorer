@@ -31,8 +31,22 @@ function ReplyInput({ postId, onSubmit, disabled }) {
   const [open, setOpen]   = useState(false)
   const [value, setValue] = useState('')
   const textareaRef = useRef(null)
+  const wrapperRef  = useRef(null)
   useEffect(() => {
     if (open) textareaRef.current?.focus()
+  }, [open])
+
+  // Collapse when clicking outside the expanded form
+  useEffect(() => {
+    if (!open) return
+    function onDown(e) {
+      if (!wrapperRef.current?.contains(e.target)) {
+        setOpen(false)
+        setValue('')
+      }
+    }
+    document.addEventListener('mousedown', onDown)
+    return () => document.removeEventListener('mousedown', onDown)
   }, [open])
 
   function handleSubmit(e) {
@@ -60,35 +74,37 @@ function ReplyInput({ postId, onSubmit, disabled }) {
   }
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="flex items-center gap-2 rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/60 shadow-sm px-3 focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/20 transition-colors"
-    >
-      <textarea
-        ref={textareaRef}
-        value={value}
-        onChange={e => setValue(e.target.value)}
-        onKeyDown={e => {
-          if (e.key === 'Enter' && !e.shiftKey) handleSubmit(e)
-          if (e.key === 'Escape') { setOpen(false); setValue('') }
-        }}
-        placeholder="Ask a follow-up…"
-        rows={1}
-        disabled={disabled}
-        style={{ resize: 'none', minHeight: '44px', maxHeight: '120px', overflowY: 'auto' }}
-        className="flex-1 bg-transparent py-3 text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none disabled:opacity-50"
-      />
-      <button
-        type="submit"
-        disabled={!value.trim() || disabled}
-        className="shrink-0 my-2 mr-1 flex h-8 w-8 items-center justify-center rounded-xl bg-accent text-white disabled:opacity-30 hover:opacity-80 transition-opacity"
-        aria-label="Submit follow-up"
+    <div ref={wrapperRef}>
+      <form
+        onSubmit={handleSubmit}
+        className="flex items-center gap-2 rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/60 shadow-sm px-3 focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/20 transition-colors"
       >
-        <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14M12 5l7 7-7 7"/>
-        </svg>
-      </button>
-    </form>
+        <textarea
+          ref={textareaRef}
+          value={value}
+          onChange={e => setValue(e.target.value)}
+          onKeyDown={e => {
+            if (e.key === 'Enter' && !e.shiftKey) handleSubmit(e)
+            if (e.key === 'Escape') { setOpen(false); setValue('') }
+          }}
+          placeholder="Ask a follow-up…"
+          rows={1}
+          disabled={disabled}
+          style={{ resize: 'none', minHeight: '44px', maxHeight: '120px', overflowY: 'auto' }}
+          className="flex-1 bg-transparent py-3 text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none disabled:opacity-50"
+        />
+        <button
+          type="submit"
+          disabled={!value.trim() || disabled}
+          className="shrink-0 my-2 mr-1 flex h-8 w-8 items-center justify-center rounded-xl bg-accent text-white disabled:opacity-30 hover:opacity-80 transition-opacity"
+          aria-label="Submit follow-up"
+        >
+          <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14M12 5l7 7-7 7"/>
+          </svg>
+        </button>
+      </form>
+    </div>
   )
 }
 
