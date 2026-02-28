@@ -62,7 +62,7 @@ function ReplyInput({ postId, onSubmit, disabled }) {
   return (
     <form
       onSubmit={handleSubmit}
-      className="flex items-center gap-2 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/60 shadow-sm px-3 focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/20 transition-colors"
+      className="flex items-center gap-2 rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/60 shadow-sm px-3 focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/20 transition-colors"
     >
       <textarea
         ref={textareaRef}

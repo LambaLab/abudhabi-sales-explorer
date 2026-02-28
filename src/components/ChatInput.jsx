@@ -36,7 +36,7 @@ export function ChatInput({ onSubmit, onStop, isLoading, settings, onSettingsCha
   return (
     <form
       onSubmit={handleSubmit}
-      className="relative flex items-center rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/60 shadow-sm focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/20 transition-colors"
+      className="relative flex items-center rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/60 shadow-sm focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/20 transition-colors"
     >
       {showSuggestions && !value && (
         <SuggestionsOverlay
