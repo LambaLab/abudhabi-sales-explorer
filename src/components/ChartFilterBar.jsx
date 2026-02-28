@@ -1,21 +1,4 @@
-import { useState } from 'react'
-
-const DATE_PRESETS = [
-  { label: 'Last 12m', key: '12m',  months: 12 },
-  { label: 'Last 2y',  key: '24m',  months: 24 },
-  { label: 'Last 3y',  key: '36m',  months: 36 },
-  { label: 'All time', key: 'all',  months: null },
-]
-
-function presetToDates(key) {
-  if (key === 'all') return { dateFrom: '', dateTo: '' }
-  const months = DATE_PRESETS.find(p => p.key === key)?.months ?? 12
-  const now    = new Date()
-  const to     = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
-  const fromD  = new Date(now.getFullYear(), now.getMonth() - months, 1)
-  const from   = `${fromD.getFullYear()}-${String(fromD.getMonth() + 1).padStart(2, '0')}`
-  return { dateFrom: from, dateTo: to }
-}
+import { DateRangePickerPopover } from './DateRangePickerPopover'
 
 const SALE_TYPE_OPTIONS = ['All', 'Ready', 'Off-Plan']
 
@@ -27,15 +10,14 @@ function pillClass(active) {
   }`
 }
 
-function hasActiveFilters(filters, datePreset) {
-  return (
-    datePreset !== 'all' ||
-    !!(filters.dateFrom || filters.dateTo ||
-       filters.districts?.length  ||
-       filters.projects?.length   ||
-       filters.propertyTypes?.length ||
-       filters.layouts?.length    ||
-       filters.saleTypes?.length)
+function hasActiveFilters(filters) {
+  return !!(
+    filters.dateFrom || filters.dateTo ||
+    filters.districts?.length  ||
+    filters.projects?.length   ||
+    filters.propertyTypes?.length ||
+    filters.layouts?.length    ||
+    filters.saleTypes?.length
   )
 }
 
@@ -44,26 +26,6 @@ function hasActiveFilters(filters, datePreset) {
  * Horizontally scrollable on small screens.
  */
 export function ChartFilterBar({ filters, updateFilter, resetFilters, meta }) {
-  const [datePreset, setDatePreset] = useState(() => {
-    if (!filters?.dateFrom && !filters?.dateTo) return 'all'
-    const now   = new Date()
-    const toStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
-    if (filters.dateTo === toStr || !filters.dateTo) {
-      for (const p of DATE_PRESETS.filter(x => x.months)) {
-        const { dateFrom } = presetToDates(p.key)
-        if (dateFrom === filters.dateFrom) return p.key
-      }
-    }
-    return 'all'
-  })
-
-  function handleDatePreset(key) {
-    setDatePreset(key)
-    const { dateFrom, dateTo } = presetToDates(key)
-    updateFilter('dateFrom', dateFrom)
-    updateFilter('dateTo', dateTo)
-  }
-
   const activeSaleType = filters.saleTypes?.length === 1 ? filters.saleTypes[0] : 'All'
 
   function handleSaleType(type) {
@@ -71,26 +33,22 @@ export function ChartFilterBar({ filters, updateFilter, resetFilters, meta }) {
   }
 
   function handleReset() {
-    setDatePreset('all')
     resetFilters()
   }
 
-  const isActive = hasActiveFilters(filters, datePreset)
+  const isActive = hasActiveFilters(filters)
 
   return (
     <div className="flex items-center gap-2 overflow-x-auto pb-3 mb-4 scrollbar-none">
 
-      {/* Date range preset */}
-      <select
-        value={datePreset}
-        onChange={e => handleDatePreset(e.target.value)}
-        className={pillClass(datePreset !== 'all')}
-        style={{ backgroundImage: 'none' }}
-      >
-        {DATE_PRESETS.map(p => (
-          <option key={p.key} value={p.key}>{p.label}</option>
-        ))}
-      </select>
+      {/* Date range picker */}
+      <DateRangePickerPopover
+        value={{ dateFrom: filters.dateFrom ?? '', dateTo: filters.dateTo ?? '' }}
+        onChange={({ dateFrom, dateTo }) => {
+          updateFilter('dateFrom', dateFrom)
+          updateFilter('dateTo', dateTo)
+        }}
+      />
 
       {/* Sale type chips */}
       <div className="flex items-center rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 overflow-hidden shrink-0">
