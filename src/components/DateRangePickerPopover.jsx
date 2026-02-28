@@ -20,6 +20,11 @@ function fromYM(s) {
   return new Date(y, m - 1, 1)
 }
 
+/** Validate that a string is a valid YYYY-MM month */
+function isValidYM(v) {
+  return /^\d{4}-(0[1-9]|1[0-2])$/.test(v)
+}
+
 export const PRESETS = [
   { label: 'Last 30 days',   fn: () => ({ from: subDays(new Date(), 30), to: new Date() }) },
   { label: 'Last month',     fn: () => ({ from: startOfMonth(subMonths(new Date(), 1)), to: endOfMonth(subMonths(new Date(), 1)) }) },
@@ -47,19 +52,25 @@ export function getDateRangeLabel(dateFrom, dateTo) {
  * Props:
  *   value        { dateFrom: 'YYYY-MM', dateTo: 'YYYY-MM' }
  *   onChange     ({ dateFrom, dateTo }) => void
- *   align        'left' | 'right'  (default 'left') — popover horizontal alignment
- *   trigger      optional ReactNode — custom trigger element; if provided, renders instead of default pill button
+ *   align        'left' | 'right' | 'down'  (default 'left')
+ *                'left'/'right' open upward; 'down' opens downward.
+ *   trigger      optional ReactNode — custom trigger element
  */
 export function DateRangePickerPopover({ value, onChange, align = 'left', trigger }) {
   const [open, setOpen]   = useState(false)
   const [range, setRange] = useState({ from: fromYM(value?.dateFrom), to: fromYM(value?.dateTo) })
   const [month, setMonth] = useState(fromYM(value?.dateFrom) ?? new Date())
-  const popRef   = useRef(null)
-  const btnRef   = useRef(null)
+  const [manualFrom, setManualFrom] = useState(value?.dateFrom ?? '')
+  const [manualTo,   setManualTo]   = useState(value?.dateTo   ?? '')
+  const [validationError, setValidationError] = useState('')
+  const popRef = useRef(null)
+  const btnRef = useRef(null)
 
-  // Sync internal range when value prop changes
+  // Sync internal state when value prop changes
   useEffect(() => {
     setRange({ from: fromYM(value?.dateFrom), to: fromYM(value?.dateTo) })
+    setManualFrom(value?.dateFrom ?? '')
+    setManualTo(value?.dateTo ?? '')
   }, [value?.dateFrom, value?.dateTo])
 
   // Close on outside click
@@ -74,6 +85,14 @@ export function DateRangePickerPopover({ value, onChange, align = 'left', trigge
     return () => document.removeEventListener('mousedown', onDown)
   }, [open])
 
+  // Calendar selection → sync manual inputs
+  function handleSelect(newRange) {
+    setRange(newRange)
+    setValidationError('')
+    if (newRange?.from) setManualFrom(toYM(newRange.from))
+    if (newRange?.to)   setManualTo(toYM(newRange.to))
+  }
+
   function applyPreset(preset) {
     const r = preset.fn()
     onChange({ dateFrom: toYM(r.from), dateTo: toYM(r.to) })
@@ -81,22 +100,28 @@ export function DateRangePickerPopover({ value, onChange, align = 'left', trigge
   }
 
   function applyRange() {
-    onChange({
-      dateFrom: toYM(range?.from),
-      dateTo:   toYM(range?.to ?? range?.from),
-    })
+    if (!isValidYM(manualFrom) || !isValidYM(manualTo)) {
+      setValidationError('Use format YYYY-MM (e.g. 2025-01)')
+      return
+    }
+    if (manualFrom > manualTo) {
+      setValidationError('"From" must be before "To"')
+      return
+    }
+    onChange({ dateFrom: manualFrom, dateTo: manualTo })
     setOpen(false)
   }
 
   function handleCancel() {
     setRange({ from: fromYM(value?.dateFrom), to: fromYM(value?.dateTo) })
+    setManualFrom(value?.dateFrom ?? '')
+    setManualTo(value?.dateTo ?? '')
+    setValidationError('')
     setOpen(false)
   }
 
-  const label = getDateRangeLabel(value?.dateFrom, value?.dateTo)
+  const label    = getDateRangeLabel(value?.dateFrom, value?.dateTo)
   const isActive = !!(value?.dateFrom || value?.dateTo)
-
-  const numMonths = 1
 
   const triggerEl = trigger ? (
     <div ref={btnRef} onClick={() => setOpen(o => !o)} className="cursor-pointer">
@@ -120,22 +145,26 @@ export function DateRangePickerPopover({ value, onChange, align = 'left', trigge
     </button>
   )
 
+  // Vertical: 'down' opens below trigger; everything else opens above
+  const verticalClass   = align === 'down' ? 'top-full mt-2' : 'bottom-full mb-2'
+  // Horizontal: 'right' aligns right edge; everything else aligns left edge
+  const horizontalClass = align === 'right' ? 'right-0' : 'left-0'
+
   return (
     <div className="relative">
       {triggerEl}
 
-      {/* Popover */}
       {open && (
         <div
           ref={popRef}
-          className={`absolute bottom-full mb-2 z-50 flex flex-col w-72 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-xl overflow-hidden ${
-            align === 'right' ? 'right-0' : 'left-0'
-          }`}
+          className={`absolute ${verticalClass} ${horizontalClass} z-50 flex flex-row w-[440px] rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-xl overflow-hidden`}
         >
-          {/* Presets panel */}
-          <div className="p-3 border-b border-slate-100 dark:border-slate-700">
-            <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide px-2 mb-2">Quick select</p>
-            <div className="space-y-0.5">
+          {/* Left — Presets */}
+          <div className="w-36 shrink-0 border-r border-slate-100 dark:border-slate-700 p-3 flex flex-col">
+            <p className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide px-2 mb-2">
+              Quick select
+            </p>
+            <div className="flex flex-col gap-0.5">
               {PRESETS.map(preset => {
                 const r = preset.fn()
                 const isPresetActive = toYM(r.from) === value?.dateFrom && toYM(r.to) === value?.dateTo
@@ -144,7 +173,7 @@ export function DateRangePickerPopover({ value, onChange, align = 'left', trigge
                     key={preset.label}
                     type="button"
                     onClick={() => applyPreset(preset)}
-                    className={`w-full text-left px-3 py-1.5 rounded-lg text-sm transition-colors ${
+                    className={`w-full text-left px-2 py-1.5 rounded-lg text-xs transition-colors ${
                       isPresetActive
                         ? 'bg-accent/10 text-accent font-medium'
                         : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'
@@ -157,15 +186,15 @@ export function DateRangePickerPopover({ value, onChange, align = 'left', trigge
             </div>
           </div>
 
-          {/* Calendar panel */}
-          <div className="p-3 flex flex-col">
+          {/* Right — Calendar + manual inputs + buttons */}
+          <div className="flex-1 p-3 flex flex-col min-w-0">
             <DayPicker
               mode="range"
               selected={range}
-              onSelect={setRange}
+              onSelect={handleSelect}
               month={month}
               onMonthChange={setMonth}
-              numberOfMonths={numMonths}
+              numberOfMonths={1}
               showOutsideDays={false}
               classNames={{
                 root:            'relative',
@@ -193,8 +222,34 @@ export function DateRangePickerPopover({ value, onChange, align = 'left', trigge
               }}
             />
 
+            {/* Manual From / To inputs */}
+            <div className="flex gap-2 mt-3 pt-3 border-t border-slate-100 dark:border-slate-700">
+              <div className="flex-1">
+                <p className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wide mb-1">From</p>
+                <input
+                  type="month"
+                  value={manualFrom}
+                  onChange={e => { setManualFrom(e.target.value); setValidationError('') }}
+                  className="w-full rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-xs text-slate-800 dark:text-slate-200 px-2 py-1.5 focus:outline-none focus:border-accent"
+                />
+              </div>
+              <div className="flex-1">
+                <p className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wide mb-1">To</p>
+                <input
+                  type="month"
+                  value={manualTo}
+                  onChange={e => { setManualTo(e.target.value); setValidationError('') }}
+                  className="w-full rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-xs text-slate-800 dark:text-slate-200 px-2 py-1.5 focus:outline-none focus:border-accent"
+                />
+              </div>
+            </div>
+
+            {validationError && (
+              <p className="text-[10px] text-red-400 mt-1">{validationError}</p>
+            )}
+
             {/* Apply / Cancel */}
-            <div className="flex justify-end gap-2 mt-3 pt-3 border-t border-slate-100 dark:border-slate-700">
+            <div className="flex justify-end gap-2 mt-2">
               <button
                 type="button"
                 onClick={handleCancel}
@@ -205,7 +260,7 @@ export function DateRangePickerPopover({ value, onChange, align = 'left', trigge
               <button
                 type="button"
                 onClick={applyRange}
-                disabled={!range?.from}
+                disabled={!manualFrom && !range?.from}
                 className="px-4 py-1.5 rounded-lg text-sm bg-accent text-white disabled:opacity-40 hover:opacity-90 transition-opacity"
               >
                 Apply
