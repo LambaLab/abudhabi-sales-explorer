@@ -1,7 +1,7 @@
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { ChartCard } from './ChartCard'
 
-const COLORS = ['#e94560','#38bdf8','#a78bfa','#34d399','#fb923c','#f472b6','#facc15','#60a5fa']
+const COLORS = ['#9266cc','#38bdf8','#a78bfa','#34d399','#fb923c','#f472b6','#facc15','#60a5fa']
 
 const fmt = (v) => v >= 1_000_000 ? `${(v / 1_000_000).toFixed(1)}M` : `${(v / 1_000).toFixed(0)}K`
 

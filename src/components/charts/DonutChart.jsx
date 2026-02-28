@@ -2,7 +2,7 @@ import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recha
 import { ChartCard } from './ChartCard'
 import { InlineDateRange } from './InlineDateRange'
 
-const COLORS = ['#e94560', '#38bdf8', '#a78bfa', '#34d399', '#fb923c', '#f472b6', '#facc15']
+const COLORS = ['#9266cc', '#38bdf8', '#a78bfa', '#34d399', '#fb923c', '#f472b6', '#facc15']
 
 export function DonutChart({ title, subtitle, data, dateRange, onDateRangeChange }) {
   // data: [{ layout: string, tx_count: number }]

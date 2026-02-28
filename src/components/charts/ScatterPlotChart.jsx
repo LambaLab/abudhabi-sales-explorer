@@ -33,7 +33,7 @@ export function ScatterPlotChart({ title, subtitle, data, dateRange, onDateRange
               )
             }}
           />
-          <Scatter data={chartData} fill="#e94560" fillOpacity={0.4} />
+          <Scatter data={chartData} fill="#9266cc" fillOpacity={0.4} />
         </ScatterChart>
       </ResponsiveContainer>
     </ChartCard>

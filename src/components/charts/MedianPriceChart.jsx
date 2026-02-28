@@ -29,12 +29,12 @@ export function MedianPriceChart({ data, chartType = 'bar' }) {
         {chartType === 'bar' ? (
           <BarChart {...commonProps}>
             {xAxis}{yAxis}{tooltip}
-            <Bar dataKey="median_price" fill="#e94560" radius={[2, 2, 0, 0]} maxBarSize={20} />
+            <Bar dataKey="median_price" fill="#9266cc" radius={[2, 2, 0, 0]} maxBarSize={20} />
           </BarChart>
         ) : (
           <LineChart {...commonProps}>
             {xAxis}{yAxis}{tooltip}
-            <Line type="monotone" dataKey="median_price" stroke="#e94560" strokeWidth={2} dot={false} activeDot={{ r: 4, fill: '#e94560' }} />
+            <Line type="monotone" dataKey="median_price" stroke="#9266cc" strokeWidth={2} dot={false} activeDot={{ r: 4, fill: '#9266cc' }} />
           </LineChart>
         )}
       </ResponsiveContainer>

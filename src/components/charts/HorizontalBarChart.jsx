@@ -2,7 +2,7 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 
 import { ChartCard } from './ChartCard'
 import { InlineDateRange } from './InlineDateRange'
 
-const ACCENT = '#e94560'
+const ACCENT = '#9266cc'
 const fmt = (v) => v >= 1_000_000 ? `${(v / 1_000_000).toFixed(1)}M` : v >= 1_000 ? `${(v / 1_000).toFixed(0)}K` : String(v)
 
 /**

@@ -40,7 +40,7 @@ export function OffPlanChart({ data, dateRange, onDateRangeChange }) {
           />
           <Legend wrapperStyle={{ fontSize: 11 }} />
           {series.map((s, i) => (
-            <Line key={s} type="monotone" dataKey={s} stroke={i === 0 ? '#e94560' : '#38bdf8'} strokeWidth={2} dot={false} />
+            <Line key={s} type="monotone" dataKey={s} stroke={i === 0 ? '#9266cc' : '#38bdf8'} strokeWidth={2} dot={false} />
           ))}
         </LineChart>
       </ResponsiveContainer>
