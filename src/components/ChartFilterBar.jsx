@@ -43,6 +43,7 @@ export function ChartFilterBar({ filters, updateFilter, resetFilters, meta }) {
 
       {/* Date range picker */}
       <DateRangePickerPopover
+        align="down"
         value={{ dateFrom: filters.dateFrom ?? '', dateTo: filters.dateTo ?? '' }}
         onChange={({ dateFrom, dateTo }) => {
           updateFilter('dateFrom', dateFrom)
