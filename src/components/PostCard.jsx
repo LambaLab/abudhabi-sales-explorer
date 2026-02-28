@@ -81,7 +81,7 @@ function ReplyInput({ postId, onSubmit, disabled }) {
       <button
         type="submit"
         disabled={!value.trim() || disabled}
-        className="shrink-0 flex h-8 w-8 items-center justify-center rounded-xl bg-accent text-white disabled:opacity-30 hover:opacity-80 transition-opacity"
+        className="shrink-0 my-2 mr-1 flex h-8 w-8 items-center justify-center rounded-xl bg-accent text-white disabled:opacity-30 hover:opacity-80 transition-opacity"
         aria-label="Submit follow-up"
       >
         <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
