@@ -49,7 +49,7 @@ function ReplyInput({ postId, onSubmit, disabled }) {
       <button
         onClick={() => setOpen(true)}
         disabled={disabled}
-        className="text-sm text-slate-500 hover:text-slate-300 transition-colors flex items-center gap-1.5 disabled:opacity-30 disabled:cursor-not-allowed"
+        className="text-sm text-slate-400 dark:text-slate-500 hover:text-accent dark:hover:text-accent transition-colors flex items-center gap-1.5 disabled:opacity-30 disabled:cursor-not-allowed"
       >
         <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
@@ -62,7 +62,7 @@ function ReplyInput({ postId, onSubmit, disabled }) {
   return (
     <form
       onSubmit={handleSubmit}
-      className="flex items-end gap-2 ml-2 pl-3 border-l-2 border-accent/40"
+      className="flex items-center gap-2 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/60 shadow-sm px-3 focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/20 transition-colors"
     >
       <textarea
         ref={textareaRef}
@@ -74,14 +74,19 @@ function ReplyInput({ postId, onSubmit, disabled }) {
         }}
         placeholder="Ask a follow-up…"
         rows={1}
-        className="flex-1 resize-none bg-transparent border-b border-slate-600 text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:border-slate-400 py-1"
+        disabled={disabled}
+        style={{ resize: 'none', minHeight: '44px', maxHeight: '120px', overflowY: 'auto' }}
+        className="flex-1 bg-transparent py-3 text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none disabled:opacity-50"
       />
       <button
         type="submit"
         disabled={!value.trim() || disabled}
-        className="text-sm text-accent disabled:opacity-30 pb-1 hover:opacity-80 transition-opacity"
+        className="shrink-0 flex h-8 w-8 items-center justify-center rounded-xl bg-accent text-white disabled:opacity-30 hover:opacity-80 transition-opacity"
+        aria-label="Submit follow-up"
       >
-        →
+        <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14M12 5l7 7-7 7"/>
+        </svg>
       </button>
     </form>
   )
