@@ -96,8 +96,7 @@ export function DateRangePickerPopover({ value, onChange, align = 'left', trigge
   const label = getDateRangeLabel(value?.dateFrom, value?.dateTo)
   const isActive = !!(value?.dateFrom || value?.dateTo)
 
-  // Responsive: 1 month on mobile, 2 on sm+
-  const numMonths = typeof window !== 'undefined' && window.innerWidth >= 640 ? 2 : 1
+  const numMonths = 1
 
   const triggerEl = trigger ? (
     <div ref={btnRef} onClick={() => setOpen(o => !o)} className="cursor-pointer">
@@ -129,12 +128,12 @@ export function DateRangePickerPopover({ value, onChange, align = 'left', trigge
       {open && (
         <div
           ref={popRef}
-          className={`absolute bottom-full mb-2 z-50 flex flex-col sm:flex-row rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-xl overflow-hidden ${
+          className={`absolute bottom-full mb-2 z-50 flex flex-col w-72 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-xl overflow-hidden ${
             align === 'right' ? 'right-0' : 'left-0'
           }`}
         >
           {/* Presets panel */}
-          <div className="p-3 border-b sm:border-b-0 sm:border-r border-slate-100 dark:border-slate-700 shrink-0 min-w-[160px]">
+          <div className="p-3 border-b border-slate-100 dark:border-slate-700">
             <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide px-2 mb-2">Quick select</p>
             <div className="space-y-0.5">
               {PRESETS.map(preset => {
@@ -174,7 +173,7 @@ export function DateRangePickerPopover({ value, onChange, align = 'left', trigge
                 button_previous: 'h-7 w-7 flex items-center justify-center rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors text-slate-500 dark:text-slate-400',
                 button_next:     'h-7 w-7 flex items-center justify-center rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors text-slate-500 dark:text-slate-400',
                 months:          'flex gap-6 pt-8',
-                month:           'min-w-[220px]',
+                month:           'w-full',
                 month_caption:   'text-center mb-3',
                 caption_label:   'text-sm font-semibold text-slate-800 dark:text-slate-200',
                 month_grid:      'w-full border-collapse',
