@@ -71,9 +71,10 @@ export function DateRangePickerPopover({ value, onChange, align = 'left', trigge
     setRange({ from: fromYM(value?.dateFrom), to: fromYM(value?.dateTo) })
     setManualFrom(value?.dateFrom ?? '')
     setManualTo(value?.dateTo ?? '')
+    setMonth(fromYM(value?.dateFrom) ?? new Date())
   }, [value?.dateFrom, value?.dateTo])
 
-  // Close on outside click
+  // Close on outside click or Escape key
   useEffect(() => {
     if (!open) return
     function onDown(e) {
@@ -81,16 +82,23 @@ export function DateRangePickerPopover({ value, onChange, align = 'left', trigge
         setOpen(false)
       }
     }
+    function onKey(e) {
+      if (e.key === 'Escape') setOpen(false)
+    }
     document.addEventListener('mousedown', onDown)
-    return () => document.removeEventListener('mousedown', onDown)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('mousedown', onDown)
+      document.removeEventListener('keydown', onKey)
+    }
   }, [open])
 
   // Calendar selection → sync manual inputs
   function handleSelect(newRange) {
     setRange(newRange)
     setValidationError('')
-    if (newRange?.from) setManualFrom(toYM(newRange.from))
-    if (newRange?.to)   setManualTo(toYM(newRange.to))
+    setManualFrom(newRange?.from ? toYM(newRange.from) : '')
+    setManualTo(newRange?.to   ? toYM(newRange.to)   : '')
   }
 
   function applyPreset(preset) {
@@ -210,8 +218,8 @@ export function DateRangePickerPopover({ value, onChange, align = 'left', trigge
                 weekday:         'w-9 text-center text-xs font-medium text-slate-400 dark:text-slate-500',
                 week:            'flex mt-1',
                 day:             'relative h-9 w-9 text-center p-0',
-                day_button:      'h-9 w-9 rounded-full flex items-center justify-center text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors w-full',
-                selected:        'bg-accent! text-white! hover:bg-accent! rounded-full',
+                day_button:      'h-9 w-9 rounded-full flex items-center justify-center text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors',
+                selected:        'rounded-full',
                 today:           'font-bold text-accent',
                 outside:         'opacity-0 pointer-events-none',
                 disabled:        'opacity-30 cursor-not-allowed',
