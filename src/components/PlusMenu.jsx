@@ -18,6 +18,10 @@ function settingsToRange(settings) {
   return { dateFrom: from, dateTo: to }
 }
 
+function isValidYM(v) {
+  return /^\d{4}-(0[1-9]|1[0-2])$/.test(v)
+}
+
 /**
  * Elegant + menu inside ChatInput pill.
  * view='main'  → Date Range row (›) + Chart Type toggle
@@ -28,11 +32,12 @@ export function PlusMenu({ settings, onSettingsChange }) {
   const [view, setView]             = useState('main')
   const [customFrom, setCustomFrom] = useState('')
   const [customTo,   setCustomTo]   = useState('')
+  const [customError, setCustomError] = useState('')
   const ref = useRef(null)
 
   // Reset to main view when popover closes
   useEffect(() => {
-    if (!open) setView('main')
+    if (!open) { setView('main'); setCustomError('') }
   }, [open])
 
   // Seed custom inputs when entering dates view
@@ -40,6 +45,7 @@ export function PlusMenu({ settings, onSettingsChange }) {
     if (view === 'dates') {
       setCustomFrom(settings.customFrom ?? '')
       setCustomTo(settings.customTo ?? '')
+      setCustomError('')
     }
   }, [view, settings.customFrom, settings.customTo])
 
@@ -63,7 +69,15 @@ export function PlusMenu({ settings, onSettingsChange }) {
   }
 
   function handleCustomApply() {
-    if (!customFrom || !customTo) return
+    if (!isValidYM(customFrom) || !isValidYM(customTo)) {
+      setCustomError('Use format YYYY-MM (e.g. 2025-01)')
+      return
+    }
+    if (customFrom > customTo) {
+      setCustomError('"From" must be before "To"')
+      return
+    }
+    setCustomError('')
     onSettingsChange({ defaultDateRange: 'custom', customFrom, customTo })
     setOpen(false)
   }
@@ -88,14 +102,17 @@ export function PlusMenu({ settings, onSettingsChange }) {
 
           {view === 'main' ? (
             <>
-              {/* Row 1 — Date Range (navigates to dates view) */}
+              {/* Row 1 — Date Range */}
               <button
                 type="button"
                 onClick={() => setView('dates')}
                 className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors text-left rounded-t-2xl"
               >
-                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-50 dark:bg-violet-900/30 text-lg shrink-0">
-                  📅
+                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 dark:bg-slate-700/60 text-slate-500 dark:text-slate-400 shrink-0">
+                  <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <rect x="3" y="4" width="18" height="18" rx="2"/>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M16 2v4M8 2v4M3 10h18"/>
+                  </svg>
                 </span>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-slate-800 dark:text-slate-200 leading-none mb-0.5">Date Range</p>
@@ -109,9 +126,11 @@ export function PlusMenu({ settings, onSettingsChange }) {
               <div className="mx-4 border-t border-slate-100 dark:border-slate-700" />
 
               {/* Row 2 — Chart Type */}
-              <div className="flex items-center gap-3 px-4 py-2.5">
-                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-50 dark:bg-violet-900/30 text-lg shrink-0">
-                  📊
+              <div className="flex items-center gap-3 px-4 py-2.5 rounded-b-2xl">
+                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 dark:bg-slate-700/60 text-slate-500 dark:text-slate-400 shrink-0">
+                  <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                  </svg>
                 </span>
                 <p className="text-sm font-medium text-slate-800 dark:text-slate-200 flex-1">Chart Type</p>
                 <div className="flex rounded-lg border border-slate-200 dark:border-slate-600 overflow-hidden">
@@ -178,17 +197,20 @@ export function PlusMenu({ settings, onSettingsChange }) {
                   <input
                     type="month"
                     value={customFrom}
-                    onChange={e => setCustomFrom(e.target.value)}
+                    onChange={e => { setCustomFrom(e.target.value); setCustomError('') }}
                     className="flex-1 min-w-0 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-xs text-slate-800 dark:text-slate-200 px-2 py-1.5 focus:outline-none focus:border-accent"
                   />
                   <span className="text-slate-400 text-xs shrink-0">→</span>
                   <input
                     type="month"
                     value={customTo}
-                    onChange={e => setCustomTo(e.target.value)}
+                    onChange={e => { setCustomTo(e.target.value); setCustomError('') }}
                     className="flex-1 min-w-0 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-xs text-slate-800 dark:text-slate-200 px-2 py-1.5 focus:outline-none focus:border-accent"
                   />
                 </div>
+                {customError && (
+                  <p className="text-[10px] text-red-400 mt-1">{customError}</p>
+                )}
                 <button
                   type="button"
                   onClick={handleCustomApply}
