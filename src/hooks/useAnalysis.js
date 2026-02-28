@@ -133,7 +133,19 @@ export function useAnalysis(meta, { addPost, patchPost, addReply, patchReply, ge
       if (mountedRef.current) setActivePostId(null)
     } catch (err) {
       if (err.name === 'AbortError') return
-      patchPost(postId, { status: 'error', error: err.message ?? 'Something went wrong' })
+      // Instead of red error text, ask Claude to clarify
+      try {
+        const clarifyText = await streamExplain(prompt, null, {}, signal, 'clarify')
+        if (!signal.aborted) {
+          patchPost(postId, { status: 'done', analysisText: clarifyText, shortText: clarifyText })
+        }
+      } catch {
+        patchPost(postId, {
+          status: 'done',
+          analysisText: "I had trouble understanding that query. Could you try rephrasing it?",
+          shortText: "I had trouble understanding that query. Could you try rephrasing it?",
+        })
+      }
       if (mountedRef.current) setActivePostId(null)
     }
   }, [meta, addPost, patchPost])
@@ -254,11 +266,21 @@ export function useAnalysis(meta, { addPost, patchPost, addReply, patchReply, ge
       if (mountedRef.current) setActivePostId(null)
     } catch (err) {
       if (err.name === 'AbortError') {
-        // Patch to error rather than leaving the reply frozen at 'explaining'
         patchReply(postId, replyId, { status: 'error', error: 'Interrupted' })
         return
       }
-      patchReply(postId, replyId, { status: 'error', error: err.message ?? 'Something went wrong' })
+      // Instead of red error text, ask Claude to clarify
+      try {
+        const clarifyText = await streamExplain(prompt, null, {}, signal, 'clarify')
+        if (!signal.aborted) {
+          patchReply(postId, replyId, { status: 'done', analysisText: clarifyText })
+        }
+      } catch {
+        patchReply(postId, replyId, {
+          status: 'done',
+          analysisText: "I had trouble with that question. Could you rephrase it?",
+        })
+      }
       if (mountedRef.current) setActivePostId(null)
     }
   }, [meta, addReply, patchReply, getPost])

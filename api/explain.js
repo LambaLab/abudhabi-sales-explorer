@@ -22,6 +22,13 @@ Rules:
 - End with a brief forward-looking observation if the data supports one
 - Keep language accessible to non-experts while remaining precise${GROUNDING_CLAUSE}`
 
+const CLARIFY_PROMPT = `You are a friendly real estate data assistant for the Abu Dhabi property market.
+The user asked a question that couldn't be processed. Respond in 2-3 sentences:
+1. Acknowledge warmly that you couldn't find what they were looking for (never mention SQL, databases, or technical errors).
+2. State your best interpretation of what they were asking about.
+3. Ask ONE specific, helpful clarifying question.
+Be conversational, warm, and concise. No lists, no headers, no markdown.`
+
 /**
  * Render summaryStats as a labelled plain-text block so the model
  * can parse the numbers reliably without needing to read JSON.
@@ -91,8 +98,39 @@ export default async function handler(req) {
   } catch {
     return new Response(JSON.stringify({ error: 'Invalid JSON body' }), { status: 400, headers: { 'Content-Type': 'application/json' } })
   }
-  if (!prompt || !intent || !summaryStats) {
-    return new Response(JSON.stringify({ error: 'Missing required fields: prompt, intent, summaryStats' }), { status: 400, headers: { 'Content-Type': 'application/json' } })
+  if (!prompt) {
+    return new Response(JSON.stringify({ error: 'Missing required field: prompt' }), { status: 400, headers: { 'Content-Type': 'application/json' } })
+  }
+  if (mode !== 'clarify' && (!intent || !summaryStats)) {
+    return new Response(JSON.stringify({ error: 'Missing required fields: intent, summaryStats' }), { status: 400, headers: { 'Content-Type': 'application/json' } })
+  }
+
+  if (mode === 'clarify') {
+    const stream = anthropic.messages.stream({
+      model: 'claude-haiku-4-5',
+      max_tokens: 120,
+      system: CLARIFY_PROMPT,
+      messages: [{ role: 'user', content: `The user asked: "${prompt}"\n\nGenerate a friendly clarifying response.` }],
+    })
+
+    const readable = new ReadableStream({
+      async start(controller) {
+        try {
+          for await (const chunk of stream) {
+            if (chunk.type === 'content_block_delta' && chunk.delta?.type === 'text_delta') {
+              controller.enqueue(new TextEncoder().encode(chunk.delta.text))
+            }
+          }
+          controller.close()
+        } catch (err) {
+          controller.error(err)
+        }
+      },
+    })
+
+    return new Response(readable, {
+      headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+    })
   }
 
   const systemPrompt = mode === 'short' ? SHORT_PROMPT : FULL_PROMPT
