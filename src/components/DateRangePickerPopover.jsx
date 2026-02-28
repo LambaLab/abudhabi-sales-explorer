@@ -8,7 +8,7 @@ import {
 } from 'date-fns'
 
 /** Convert a Date to 'YYYY-MM' string */
-function toYM(d) {
+export function toYM(d) {
   if (!d) return ''
   return format(d, 'yyyy-MM')
 }
@@ -20,7 +20,7 @@ function fromYM(s) {
   return new Date(y, m - 1, 1)
 }
 
-const PRESETS = [
+export const PRESETS = [
   { label: 'Last 30 days',   fn: () => ({ from: subDays(new Date(), 30), to: new Date() }) },
   { label: 'Last month',     fn: () => ({ from: startOfMonth(subMonths(new Date(), 1)), to: endOfMonth(subMonths(new Date(), 1)) }) },
   { label: 'Last 90 days',   fn: () => ({ from: subDays(new Date(), 90), to: new Date() }) },
@@ -169,13 +169,14 @@ export function DateRangePickerPopover({ value, onChange, align = 'left', trigge
               numberOfMonths={numMonths}
               showOutsideDays={false}
               classNames={{
-                months:          'flex gap-6',
-                month:           'min-w-[220px]',
-                month_caption:   'flex items-center justify-between mb-3 px-1',
-                caption_label:   'text-sm font-semibold text-slate-800 dark:text-slate-200',
-                nav:             'flex items-center gap-1',
+                root:            'relative',
+                nav:             'absolute top-0 inset-x-0 flex justify-between items-center px-1 h-8 z-10',
                 button_previous: 'h-7 w-7 flex items-center justify-center rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors text-slate-500 dark:text-slate-400',
                 button_next:     'h-7 w-7 flex items-center justify-center rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors text-slate-500 dark:text-slate-400',
+                months:          'flex gap-6 pt-8',
+                month:           'min-w-[220px]',
+                month_caption:   'text-center mb-3',
+                caption_label:   'text-sm font-semibold text-slate-800 dark:text-slate-200',
                 month_grid:      'w-full border-collapse',
                 weekdays:        'flex mb-1',
                 weekday:         'w-9 text-center text-xs font-medium text-slate-400 dark:text-slate-500',
