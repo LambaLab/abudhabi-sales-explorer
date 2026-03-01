@@ -1,4 +1,4 @@
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
+import { LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import { ChartCard } from './ChartCard'
 
 const CustomTooltip = ({ active, payload, label }) => {
@@ -11,20 +11,26 @@ const CustomTooltip = ({ active, payload, label }) => {
   )
 }
 
-export function VolumeChart({ data }) {
+export function VolumeChart({ data, chartType = 'bar' }) {
+  const common = { data, margin: { top: 4, right: 8, left: 0, bottom: 0 } }
+  const xAxis  = <XAxis dataKey="month" tick={{ fontSize: 10, fill: '#64748b' }} tickLine={false} interval="preserveStartEnd" />
+  const yAxis  = <YAxis tick={{ fontSize: 10, fill: '#64748b' }} tickLine={false} axisLine={false} width={40} />
+  const tooltip = <Tooltip content={<CustomTooltip />} />
+
   return (
-    <ChartCard
-      title="Transaction Volume"
-      subtitle="Number of sales per month"
-      empty={!data?.length}
-    >
+    <ChartCard title="Transaction Volume" subtitle="Number of sales per month" empty={!data?.length}>
       <ResponsiveContainer width="100%" height={180}>
-        <BarChart data={data} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
-          <XAxis dataKey="month" tick={{ fontSize: 10, fill: '#64748b' }} tickLine={false} interval="preserveStartEnd" />
-          <YAxis tick={{ fontSize: 10, fill: '#64748b' }} tickLine={false} axisLine={false} width={40} />
-          <Tooltip content={<CustomTooltip />} />
-          <Bar dataKey="tx_count" fill="#6366f1" radius={[2, 2, 0, 0]} maxBarSize={16} />
-        </BarChart>
+        {chartType === 'line' ? (
+          <LineChart {...common}>
+            {xAxis}{yAxis}{tooltip}
+            <Line type="monotone" dataKey="tx_count" stroke="#9266cc" strokeWidth={2} dot={false} activeDot={{ r: 4, fill: '#9266cc' }} />
+          </LineChart>
+        ) : (
+          <BarChart {...common}>
+            {xAxis}{yAxis}{tooltip}
+            <Bar dataKey="tx_count" fill="#9266cc" radius={[2, 2, 0, 0]} maxBarSize={16} />
+          </BarChart>
+        )}
       </ResponsiveContainer>
     </ChartCard>
   )
