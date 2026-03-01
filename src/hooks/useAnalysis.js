@@ -156,7 +156,8 @@ export function useAnalysis(meta, { addPost, patchPost, addReply, patchReply, ge
             clarifyOptions: options ?? [],
           })
         }
-      } catch {
+      } catch (innerErr) {
+        if (innerErr.name === 'AbortError') return
         patchPost(postId, {
           status:         'done',
           analysisText:   'Could you rephrase that?',
@@ -297,7 +298,8 @@ export function useAnalysis(meta, { addPost, patchPost, addReply, patchReply, ge
             clarifyOptions: options ?? [],
           })
         }
-      } catch {
+      } catch (innerErr) {
+        if (innerErr.name === 'AbortError') return
         patchReply(postId, replyId, {
           status:         'done',
           analysisText:   'Could you rephrase that?',
