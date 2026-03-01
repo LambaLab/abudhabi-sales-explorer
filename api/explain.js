@@ -9,7 +9,7 @@ const GROUNDING_CLAUSE = `
 CRITICAL: Only cite numbers that appear verbatim in the KEY DATA section below. Do not draw on your training knowledge of Abu Dhabi real estate prices, volumes, or market trends. Every AED figure, percentage, and transaction count you write must come directly from the provided data. If a number is not in the data, do not mention it.`
 
 const SHORT_PROMPT = `You are a real estate market analyst specializing in Abu Dhabi property.
-Write exactly 2-3 sentences summarizing the single most important insight with specific numbers.
+Write exactly 1 sentence with the single most important insight and the key number.
 No headers, no bullets, flowing prose only.${GROUNDING_CLAUSE}`
 
 const FULL_PROMPT = `You are a real estate market analyst specializing in Abu Dhabi property.
@@ -22,16 +22,27 @@ Rules:
 - End with a brief forward-looking observation if the data supports one
 - Keep language accessible to non-experts while remaining precise${GROUNDING_CLAUSE}`
 
-const CLARIFY_PROMPT = `You are a friendly real estate data assistant for the Abu Dhabi property market.
-The user asked a question that couldn't be processed. Return a JSON object with exactly two keys:
-- "question": A short, warm clarifying question (max 10 words, no trailing period, no markdown)
-- "options": An array of 2–3 short answer strings (max 5 words each) the user can tap to reply
+const CLARIFY_FALLBACK = {
+  question: 'What data interests you?',
+  options: ['Price trends', 'Transaction volumes', 'District comparison'],
+}
 
-Example output:
-{"question":"Which area are you interested in?","options":["Downtown Abu Dhabi","Yas Island","Al Reem Island"]}
+const CLARIFY_PROMPT = `You are a friendly real estate data assistant for the Abu Dhabi property market.
+The user asked a question this system cannot directly answer. This system can show: price trends, price-per-sqm trends, transaction volumes, project comparisons, district comparisons, and layout breakdowns.
+
+Based on the user's question, return a JSON object with exactly two keys:
+- "question": A short, warm clarifying question that steers toward what data would help (max 10 words, no trailing period, no markdown)
+- "options": An array of 2–3 short strings (max 5 words each) that are real data queries the system can run
+
+Good chips: "Price growth by project", "Most active projects", "By district volume"
+Bad chips: "Try different wording", "Ask something else", "Rephrase your question"
+
+Example for "Which project should I buy?":
+{"question":"What data would help most?","options":["Price growth by project","Transaction volume","Price per sqm"]}
 
 Rules:
 - Never mention SQL, databases, or technical errors
+- Options must be data requests, not meta-responses about rephrasing
 - Return ONLY valid JSON — no markdown fences, no explanation text, nothing else`
 
 /**
@@ -122,13 +133,14 @@ export default async function handler(req) {
       let parsed
       if (!rawText) {
         console.warn('[explain] clarify: empty content from Anthropic API')
-        parsed = { question: 'Could you rephrase that?', options: ['Try different wording', 'Ask something else'] }
+        parsed = CLARIFY_FALLBACK
       } else {
         try {
-          parsed = JSON.parse(rawText)
+          const cleaned = rawText.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '').trim()
+          parsed = JSON.parse(cleaned)
         } catch {
           console.warn('[explain] clarify: JSON.parse failed on:', rawText)
-          parsed = { question: 'Could you rephrase that?', options: ['Try different wording', 'Ask something else'] }
+          parsed = CLARIFY_FALLBACK
         }
       }
       return Response.json(parsed)
@@ -136,12 +148,12 @@ export default async function handler(req) {
       if (err.name !== 'AbortError') {
         console.warn('[explain] clarify: Anthropic API error:', err.message)
       }
-      return Response.json({ question: 'Could you rephrase that?', options: ['Try different wording', 'Ask something else'] })
+      return Response.json(CLARIFY_FALLBACK)
     }
   }
 
   const systemPrompt = mode === 'short' ? SHORT_PROMPT : FULL_PROMPT
-  const maxTokens    = mode === 'short' ? 150 : 600
+  const maxTokens    = mode === 'short' ? 80 : 600
 
   const userMessage = `Original question: "${prompt}"
 
