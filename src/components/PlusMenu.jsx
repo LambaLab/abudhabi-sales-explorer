@@ -141,7 +141,7 @@ export function PlusMenu({ settings, onSettingsChange }) {
                 </span>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-slate-800 dark:text-slate-200 leading-none mb-0.5">Chart Type</p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 capitalize">{settings.chartType}</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 capitalize">{settings.chartType ?? 'bar'}</p>
                 </div>
                 <svg className="h-4 w-4 text-slate-300 dark:text-slate-500 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7"/>
@@ -226,7 +226,7 @@ export function PlusMenu({ settings, onSettingsChange }) {
               <div className="flex items-center gap-2 px-3 py-2.5 border-b border-slate-100 dark:border-slate-700">
                 <button
                   type="button"
-                  onClick={() => setView('main')}
+                  onClick={() => { setView('main'); setCustomError('') }}
                   className="flex h-6 w-6 items-center justify-center rounded-md hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors text-slate-500 dark:text-slate-400 shrink-0"
                   aria-label="Back"
                 >
@@ -239,7 +239,7 @@ export function PlusMenu({ settings, onSettingsChange }) {
 
               <div className="p-2">
                 {['bar', 'line'].map(type => {
-                  const isActive = settings.chartType === type
+                  const isActive = (settings.chartType ?? 'bar') === type
                   return (
                     <button
                       key={type}
