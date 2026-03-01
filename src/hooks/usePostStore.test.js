@@ -19,6 +19,7 @@ const makePost = (overrides = {}) => ({
   intent: null,
   chartData: null,
   chartKeys: null,
+  clarifyOptions: null,
   replies: [],
   ...overrides,
 })
@@ -161,5 +162,39 @@ describe('usePostStore — patchReply', () => {
     const storedReply = stored.find(p => p.id === 'p1').replies[0]
     expect(storedReply.status).toBe('done')
     expect(storedReply.analysisText).toBe('reply text')
+  })
+})
+
+describe('usePostStore — clarifyOptions', () => {
+  it('starts as null in makePost default', () => {
+    const { result } = renderHook(() => usePostStore())
+    act(() => result.current.addPost(makePost()))
+    expect(result.current.getPost('p1').clarifyOptions).toBeNull()
+  })
+
+  it('patchPost can set clarifyOptions array', () => {
+    const { result } = renderHook(() => usePostStore())
+    act(() => result.current.addPost(makePost()))
+    act(() => result.current.patchPost('p1', {
+      clarifyOptions: ['Downtown Abu Dhabi', 'Yas Island', 'Al Reem Island'],
+    }))
+    expect(result.current.getPost('p1').clarifyOptions).toEqual([
+      'Downtown Abu Dhabi', 'Yas Island', 'Al Reem Island',
+    ])
+  })
+
+  it('clarifyOptions persists to localStorage', () => {
+    const { result } = renderHook(() => usePostStore())
+    act(() => result.current.addPost(makePost()))
+    act(() => result.current.patchPost('p1', { clarifyOptions: ['Option A', 'Option B'] }))
+    const stored = JSON.parse(localStorage.getItem('ad_posts_v3'))
+    expect(stored[0].clarifyOptions).toEqual(['Option A', 'Option B'])
+  })
+
+  it('patchPost can clear clarifyOptions back to null', () => {
+    const { result } = renderHook(() => usePostStore())
+    act(() => result.current.addPost(makePost({ clarifyOptions: ['A', 'B'] })))
+    act(() => result.current.patchPost('p1', { clarifyOptions: null }))
+    expect(result.current.getPost('p1').clarifyOptions).toBeNull()
   })
 })
