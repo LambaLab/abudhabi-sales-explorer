@@ -192,8 +192,8 @@ export default function App() {
             </div>
           )}
 
-          {/* Frosted bottom bar */}
-          <div className="shrink-0 px-4 py-3 z-10 bg-slate-50/75 dark:bg-[#0f172a]/75 backdrop-blur-md">
+          {/* Frosted bottom bar — absolute so content scrolls behind it */}
+          <div className="absolute bottom-0 left-0 right-0 px-4 py-3 z-10 bg-slate-50/75 dark:bg-[#0f172a]/75 backdrop-blur-md">
             <div className="mx-auto max-w-2xl">
               <ChatInput
                 onSubmit={analyzeWithSettings}
