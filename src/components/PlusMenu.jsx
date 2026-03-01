@@ -65,6 +65,7 @@ export function PlusMenu({ settings, onSettingsChange }) {
   function handlePreset(preset) {
     const r = preset.fn()
     onSettingsChange({ defaultDateRange: 'custom', customFrom: toYM(r.from), customTo: toYM(r.to) })
+    setCustomError('')
     setOpen(false)
   }
 
@@ -157,7 +158,7 @@ export function PlusMenu({ settings, onSettingsChange }) {
               <div className="flex items-center gap-2 px-3 py-2.5 border-b border-slate-100 dark:border-slate-700">
                 <button
                   type="button"
-                  onClick={() => setView('main')}
+                  onClick={() => { setView('main'); setCustomError('') }}
                   className="flex h-6 w-6 items-center justify-center rounded-md hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors text-slate-500 dark:text-slate-400 shrink-0"
                   aria-label="Back"
                 >
