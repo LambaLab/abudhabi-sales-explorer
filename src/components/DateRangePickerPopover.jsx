@@ -80,7 +80,7 @@ export function DateRangePickerPopover({ value, onChange, align = 'left', trigge
   const btnRef = useRef(null)
 
   /** Compute fixed position from the trigger's bounding rect */
-  function computePos() {
+  function computePos(alignValue) {
     if (!btnRef.current) return null
     const r     = btnRef.current.getBoundingClientRect()
     const POPUP_H = 420
@@ -88,9 +88,9 @@ export function DateRangePickerPopover({ value, onChange, align = 'left', trigge
     const vpW = window.innerWidth
     const vpH = window.innerHeight
     // Go down if forced or not enough space above
-    const goDown = align === 'down' || r.top < POPUP_H + 16
+    const goDown = alignValue === 'down' || r.top < POPUP_H + 16
     // Horizontal: right-align means right edge of popup = right edge of trigger
-    const rawLeft = align === 'right' ? r.right - POPUP_W : r.left
+    const rawLeft = alignValue === 'right' ? r.right - POPUP_W : r.left
     const left = Math.max(8, Math.min(rawLeft, vpW - POPUP_W - 8))
     return goDown
       ? { top: r.bottom + 8, left }
@@ -109,10 +109,9 @@ export function DateRangePickerPopover({ value, onChange, align = 'left', trigge
 
   // Compute position synchronously after open state changes (before paint)
   useLayoutEffect(() => {
-    if (open) setPos(computePos())
+    if (open) setPos(computePos(align))
     else { setPos(null); setValidationError('') }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open])
+  }, [open, align])
 
   // Close on: outside click, Escape key, any scroll
   useEffect(() => {
@@ -157,7 +156,14 @@ export function DateRangePickerPopover({ value, onChange, align = 'left', trigge
       setValidationError('"From" must be before "To"')
       return
     }
-    onChange({ dateFrom: manualFrom, dateTo: manualTo })
+    // Preserve "All time" if the underlying was empty and the user hasn't changed
+    // the display defaults — avoids silently converting "All time" to a concrete range.
+    const wasAllTime = !value?.dateFrom && !value?.dateTo
+    if (wasAllTime && manualFrom === DEFAULT_FROM && manualTo === getDefaultTo()) {
+      onChange({ dateFrom: '', dateTo: '' })
+    } else {
+      onChange({ dateFrom: manualFrom, dateTo: manualTo })
+    }
     setOpen(false)
   }
 
