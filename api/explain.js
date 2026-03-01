@@ -23,11 +23,16 @@ Rules:
 - Keep language accessible to non-experts while remaining precise${GROUNDING_CLAUSE}`
 
 const CLARIFY_PROMPT = `You are a friendly real estate data assistant for the Abu Dhabi property market.
-The user asked a question that couldn't be processed. Respond in 2-3 sentences:
-1. Acknowledge warmly that you couldn't find what they were looking for (never mention SQL, databases, or technical errors).
-2. State your best interpretation of what they were asking about.
-3. Ask ONE specific, helpful clarifying question.
-Be conversational, warm, and concise. No lists, no headers, no markdown.`
+The user asked a question that couldn't be processed. Return a JSON object with exactly two keys:
+- "question": A short, warm clarifying question (max 10 words, no trailing period, no markdown)
+- "options": An array of 2–3 short answer strings (max 5 words each) the user can tap to reply
+
+Example output:
+{"question":"Which area are you interested in?","options":["Downtown Abu Dhabi","Yas Island","Al Reem Island"]}
+
+Rules:
+- Never mention SQL, databases, or technical errors
+- Return ONLY valid JSON — no markdown fences, no explanation text, nothing else`
 
 /**
  * Render summaryStats as a labelled plain-text block so the model
@@ -106,31 +111,19 @@ export default async function handler(req) {
   }
 
   if (mode === 'clarify') {
-    const stream = anthropic.messages.stream({
+    const msg = await anthropic.messages.create({
       model: 'claude-haiku-4-5',
-      max_tokens: 120,
+      max_tokens: 200,
       system: CLARIFY_PROMPT,
-      messages: [{ role: 'user', content: `The user asked: "${prompt}"\n\nGenerate a friendly clarifying response.` }],
+      messages: [{ role: 'user', content: `The user asked: "${prompt}"` }],
     })
-
-    const readable = new ReadableStream({
-      async start(controller) {
-        try {
-          for await (const chunk of stream) {
-            if (chunk.type === 'content_block_delta' && chunk.delta?.type === 'text_delta') {
-              controller.enqueue(new TextEncoder().encode(chunk.delta.text))
-            }
-          }
-          controller.close()
-        } catch (err) {
-          controller.error(err)
-        }
-      },
-    })
-
-    return new Response(readable, {
-      headers: { 'Content-Type': 'text/plain; charset=utf-8' },
-    })
+    let parsed
+    try {
+      parsed = JSON.parse(msg.content[0].text)
+    } catch {
+      parsed = { question: "Could you rephrase that?", options: ["Try different wording", "Ask something else"] }
+    }
+    return Response.json(parsed)
   }
 
   const systemPrompt = mode === 'short' ? SHORT_PROMPT : FULL_PROMPT
