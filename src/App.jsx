@@ -28,9 +28,11 @@ export default function App() {
 
   const [activeTab, setActiveTab] = useState('feed') // 'feed' | 'chart'
 
-  const isLoading  = activePostId !== null
-  const feedEndRef = useRef(null)
-  const prevCount  = useRef(posts.length)
+  const isLoading      = activePostId !== null
+  const feedEndRef     = useRef(null)
+  const mainRef        = useRef(null)
+  const prevCount      = useRef(posts.length)
+  const [showScrollDown, setShowScrollDown] = useState(false)
 
   // Auto-scroll to bottom when a new post is added
   useEffect(() => {
@@ -39,6 +41,18 @@ export default function App() {
     }
     prevCount.current = posts.length
   }, [posts.length])
+
+  // Show scroll-to-bottom button when user scrolls up
+  useEffect(() => {
+    const el = mainRef.current
+    if (!el) return
+    function onScroll() {
+      const distFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight
+      setShowScrollDown(distFromBottom > 200)
+    }
+    el.addEventListener('scroll', onScroll, { passive: true })
+    return () => el.removeEventListener('scroll', onScroll)
+  }, [])
 
   // Inject default date range hint into analyze prompt
   function analyzeWithSettings(prompt) {
@@ -145,9 +159,9 @@ export default function App() {
 
       {/* ── Feed tab ── */}
       {activeTab === 'feed' && (
-        <>
-          <main className="flex-1 overflow-y-auto">
-            <div className="mx-auto max-w-2xl px-4 py-4 space-y-4">
+        <div className="relative flex-1 flex flex-col min-h-0">
+          <main ref={mainRef} className="flex-1 overflow-y-auto">
+            <div className="mx-auto max-w-2xl px-4 pt-4 pb-24 space-y-4">
               <PostFeed
                 posts={posts}
                 onReply={(postId, prompt) => analyzeReply(postId, prompt + getDateRangeHint())}
@@ -160,7 +174,24 @@ export default function App() {
             </div>
           </main>
 
-          <div className="shrink-0 px-4 py-3 z-10">
+          {/* Scroll-to-latest button */}
+          {showScrollDown && (
+            <div className="absolute bottom-20 inset-x-0 flex justify-center z-20 pointer-events-none">
+              <button
+                type="button"
+                onClick={() => feedEndRef.current?.scrollIntoView({ behavior: 'smooth' })}
+                className="pointer-events-auto flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-accent text-white text-xs font-medium shadow-lg hover:opacity-90 transition-opacity"
+              >
+                <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7"/>
+                </svg>
+                Jump to latest
+              </button>
+            </div>
+          )}
+
+          {/* Frosted bottom bar */}
+          <div className="shrink-0 px-4 py-3 z-10 bg-slate-50/75 dark:bg-[#0f172a]/75 backdrop-blur-md">
             <div className="mx-auto max-w-2xl">
               <ChatInput
                 onSubmit={analyzeWithSettings}
@@ -171,7 +202,7 @@ export default function App() {
               />
             </div>
           </div>
-        </>
+        </div>
       )}
 
       {/* ── Charts tab ── */}
