@@ -45,6 +45,17 @@ async function streamExplain(prompt, intent, summaryStats, signal, mode = 'full'
   return full
 }
 
+async function fetchClarify(prompt, signal) {
+  const res = await fetch('/api/explain', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ prompt, mode: 'clarify' }),
+    signal,
+  })
+  if (!res.ok) throw new Error(`Clarify API error: ${res.status}`)
+  return res.json() // { question: string, options: string[] }
+}
+
 /**
  * useAnalysis — drives the full analysis pipeline, writing every stage
  * directly into the shared usePostStore via the store functions passed in.
@@ -84,17 +95,18 @@ export function useAnalysis(meta, { addPost, patchPost, addReply, patchReply, ge
 
     // ── Step 1: insert placeholder post immediately (fixes the flicker bug) ──
     addPost({
-      id:           postId,
-      createdAt:    Date.now(),
+      id:             postId,
+      createdAt:      Date.now(),
       prompt,
-      title:        prompt.slice(0, 60),
-      status:       'analyzing',
-      error:        null,
-      analysisText: '',
-      intent:       null,
-      chartData:    null,
-      chartKeys:    null,
-      replies:      [],
+      title:          prompt.slice(0, 60),
+      status:         'analyzing',
+      error:          null,
+      analysisText:   '',
+      intent:         null,
+      chartData:      null,
+      chartKeys:      null,
+      clarifyOptions: null,
+      replies:        [],
     })
 
     try {
@@ -133,17 +145,23 @@ export function useAnalysis(meta, { addPost, patchPost, addReply, patchReply, ge
       if (mountedRef.current) setActivePostId(null)
     } catch (err) {
       if (err.name === 'AbortError') return
-      // Instead of red error text, ask Claude to clarify
+      // Instead of red error text, ask Claude to clarify with chip options
       try {
-        const clarifyText = await streamExplain(prompt, null, {}, signal, 'clarify')
+        const { question, options } = await fetchClarify(prompt, signal)
         if (!signal.aborted) {
-          patchPost(postId, { status: 'done', analysisText: clarifyText, shortText: clarifyText })
+          patchPost(postId, {
+            status:         'done',
+            analysisText:   question,
+            shortText:      question,
+            clarifyOptions: options ?? [],
+          })
         }
       } catch {
         patchPost(postId, {
-          status: 'done',
-          analysisText: "I had trouble understanding that query. Could you try rephrasing it?",
-          shortText: "I had trouble understanding that query. Could you try rephrasing it?",
+          status:         'done',
+          analysisText:   'Could you rephrase that?',
+          shortText:      'Could you rephrase that?',
+          clarifyOptions: null,
         })
       }
       if (mountedRef.current) setActivePostId(null)
@@ -269,16 +287,21 @@ export function useAnalysis(meta, { addPost, patchPost, addReply, patchReply, ge
         patchReply(postId, replyId, { status: 'error', error: 'Interrupted' })
         return
       }
-      // Instead of red error text, ask Claude to clarify
+      // Instead of red error text, ask Claude to clarify with chip options
       try {
-        const clarifyText = await streamExplain(prompt, null, {}, signal, 'clarify')
+        const { question, options } = await fetchClarify(prompt, signal)
         if (!signal.aborted) {
-          patchReply(postId, replyId, { status: 'done', analysisText: clarifyText })
+          patchReply(postId, replyId, {
+            status:         'done',
+            analysisText:   question,
+            clarifyOptions: options ?? [],
+          })
         }
       } catch {
         patchReply(postId, replyId, {
-          status: 'done',
-          analysisText: "I had trouble with that question. Could you rephrase it?",
+          status:         'done',
+          analysisText:   'Could you rephrase that?',
+          clarifyOptions: null,
         })
       }
       if (mountedRef.current) setActivePostId(null)
