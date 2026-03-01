@@ -42,8 +42,10 @@ export default function App() {
     prevCount.current = posts.length
   }, [posts.length])
 
-  // Show scroll-to-bottom button when user scrolls up
+  // Show scroll-to-bottom button when user scrolls up.
+  // Depends on activeTab so the listener re-attaches when the feed tab remounts.
   useEffect(() => {
+    if (activeTab !== 'feed') return
     const el = mainRef.current
     if (!el) return
     function onScroll() {
@@ -52,7 +54,7 @@ export default function App() {
     }
     el.addEventListener('scroll', onScroll, { passive: true })
     return () => el.removeEventListener('scroll', onScroll)
-  }, [])
+  }, [activeTab])
 
   // Inject default date range hint into analyze prompt
   function analyzeWithSettings(prompt) {
