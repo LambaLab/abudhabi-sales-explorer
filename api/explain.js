@@ -111,19 +111,33 @@ export default async function handler(req) {
   }
 
   if (mode === 'clarify') {
-    const msg = await anthropic.messages.create({
-      model: 'claude-haiku-4-5',
-      max_tokens: 200,
-      system: CLARIFY_PROMPT,
-      messages: [{ role: 'user', content: `The user asked: "${prompt}"` }],
-    })
-    let parsed
     try {
-      parsed = JSON.parse(msg.content[0].text)
-    } catch {
-      parsed = { question: "Could you rephrase that?", options: ["Try different wording", "Ask something else"] }
+      const msg = await anthropic.messages.create({
+        model: 'claude-haiku-4-5',
+        max_tokens: 200,
+        system: CLARIFY_PROMPT,
+        messages: [{ role: 'user', content: `The user asked: "${prompt}"` }],
+      })
+      const rawText = msg?.content?.[0]?.text
+      let parsed
+      if (!rawText) {
+        console.warn('[explain] clarify: empty content from Anthropic API')
+        parsed = { question: 'Could you rephrase that?', options: ['Try different wording', 'Ask something else'] }
+      } else {
+        try {
+          parsed = JSON.parse(rawText)
+        } catch {
+          console.warn('[explain] clarify: JSON.parse failed on:', rawText)
+          parsed = { question: 'Could you rephrase that?', options: ['Try different wording', 'Ask something else'] }
+        }
+      }
+      return Response.json(parsed)
+    } catch (err) {
+      if (err.name !== 'AbortError') {
+        console.warn('[explain] clarify: Anthropic API error:', err.message)
+      }
+      return Response.json({ question: 'Could you rephrase that?', options: ['Try different wording', 'Ask something else'] })
     }
-    return Response.json(parsed)
   }
 
   const systemPrompt = mode === 'short' ? SHORT_PROMPT : FULL_PROMPT
