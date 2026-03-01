@@ -136,7 +136,7 @@ export default async function handler(req) {
         parsed = CLARIFY_FALLBACK
       } else {
         try {
-          const cleaned = rawText.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '').trim()
+          const cleaned = rawText.replace(/^```(?:json)?\n?/, '').replace(/\n?```\n?$/, '').trim()
           parsed = JSON.parse(cleaned)
         } catch {
           console.warn('[explain] clarify: JSON.parse failed on:', rawText)
