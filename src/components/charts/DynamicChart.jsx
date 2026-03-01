@@ -6,7 +6,6 @@ import { ProjectComparisonChart } from './ProjectComparisonChart'
 /**
  * Renders the correct chart component based on the post's queryType.
  * chartType ('bar' | 'line') is forwarded to trend/comparison charts.
- * VolumeChart is always bar (transaction counts).
  */
 export function DynamicChart({ intent, chartData, chartKeys, chartType = 'bar' }) {
   const { queryType } = intent ?? {}
@@ -15,7 +14,7 @@ export function DynamicChart({ intent, chartData, chartKeys, chartType = 'bar' }
     return <PricePerSqmChart data={chartData} chartType={chartType} />
   }
   if (queryType === 'volume_trend') {
-    return <VolumeChart data={chartData} />
+    return <VolumeChart data={chartData} chartType={chartType} />
   }
   if (['project_comparison', 'district_comparison', 'layout_distribution'].includes(queryType)) {
     return <ProjectComparisonChart data={chartData} seriesKeys={chartKeys} chartType={chartType} />
