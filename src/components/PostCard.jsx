@@ -286,6 +286,22 @@ export function PostCard({ post, onReply, isActive, onCancel, onDeepAnalysis, ch
         </div>
       )}
 
+      {/* ── Clarification chips (shown when clarifyOptions exist and no replies yet) ── */}
+      {onReply && isDone && post.clarifyOptions?.length > 0 && !post.replies?.length && (
+        <div className="flex flex-wrap gap-2 pt-1">
+          {post.clarifyOptions.map((option) => (
+            <button
+              key={option}
+              onClick={() => onReply(post.id, option)}
+              disabled={hasActiveReply}
+              className="rounded-full border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-1.5 text-sm text-slate-700 dark:text-slate-300 hover:border-accent hover:text-accent transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              {option}
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* ── Inline reply input (only when post is done and onReply provided) ── */}
       {onReply && isDone && (
         <div className="pt-1">
