@@ -276,12 +276,12 @@ export function useAnalysis(meta, { addPost, patchPost, addReply, patchReply, ge
 
       patchReply(postId, replyId, { status: 'explaining', chartData, chartKeys })
 
-      // ── Step 3: stream reply text (buffered — shown all at once) ──
-      const fullText = await streamExplain(prompt, intent, summaryStats, signal)
+      // ── Step 3: stream reply text (short — 1 sentence) ──
+      const replyText = await streamExplain(prompt, intent, summaryStats, signal, 'short')
 
       if (signal.aborted) return
 
-      patchReply(postId, replyId, { status: 'done', analysisText: fullText })
+      patchReply(postId, replyId, { status: 'done', analysisText: replyText })
       if (mountedRef.current) setActivePostId(null)
     } catch (err) {
       if (err.name === 'AbortError') {
