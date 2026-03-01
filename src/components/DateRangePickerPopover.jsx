@@ -78,6 +78,9 @@ export function DateRangePickerPopover({ value, onChange, align = 'left', trigge
   const [pos, setPos] = useState(null)
   const popRef = useRef(null)
   const btnRef = useRef(null)
+  // Snapshot of the default-to value when it was last applied; used in applyRange
+  // to avoid comparing against a re-called getDefaultTo() at click time.
+  const defaultToSnapshotRef = useRef(initTo)
 
   /** Compute fixed position from the trigger's bounding rect */
   function computePos(alignValue) {
@@ -105,6 +108,7 @@ export function DateRangePickerPopover({ value, onChange, align = 'left', trigge
     setManualFrom(from)
     setManualTo(to)
     setMonth(fromYM(from) ?? new Date())
+    defaultToSnapshotRef.current = to
   }, [value?.dateFrom, value?.dateTo])
 
   // Compute position synchronously after open state changes (before paint)
@@ -158,8 +162,10 @@ export function DateRangePickerPopover({ value, onChange, align = 'left', trigge
     }
     // Preserve "All time" if the underlying was empty and the user hasn't changed
     // the display defaults — avoids silently converting "All time" to a concrete range.
+    // Compare against the snapshot captured when defaults were applied, not a fresh
+    // getDefaultTo() call, to prevent a false mismatch at month boundaries.
     const wasAllTime = !value?.dateFrom && !value?.dateTo
-    if (wasAllTime && manualFrom === DEFAULT_FROM && manualTo === getDefaultTo()) {
+    if (wasAllTime && manualFrom === DEFAULT_FROM && manualTo === defaultToSnapshotRef.current) {
       onChange({ dateFrom: '', dateTo: '' })
     } else {
       onChange({ dateFrom: manualFrom, dateTo: manualTo })
