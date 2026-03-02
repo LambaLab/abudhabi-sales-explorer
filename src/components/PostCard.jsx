@@ -111,11 +111,13 @@ function ReplyInput({ postId, onSubmit, disabled }) {
 export function PostCard({ post, onReply, isActive, onCancel, onDeepAnalysis, chartType = 'bar' }) {
   const [copied, setCopied] = useState(false)
   const [dateRange, setDateRange] = useState({ dateFrom: '', dateTo: '' })
-  const bottomRef = useRef(null)
+  const bottomRef   = useRef(null)
+  const didMountRef = useRef(false)
 
-  // Auto-scroll to latest reply when it finishes streaming
+  // Auto-scroll to latest reply when it finishes streaming (skip on initial mount)
   const lastReply = post.replies?.at(-1)
   useEffect(() => {
+    if (!didMountRef.current) { didMountRef.current = true; return }
     if (lastReply?.status === 'done') {
       bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
     }
