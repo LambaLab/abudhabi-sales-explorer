@@ -9,21 +9,21 @@ const STATUS_LABELS = {
 
 function TypingIndicator({ status }) {
   return (
-    <div>
+    <div role="status" aria-live="polite" aria-label={STATUS_LABELS[status] ?? 'Loading'}>
       <div className="rounded-xl bg-slate-100 dark:bg-slate-800 px-3.5 py-2.5 inline-flex items-center gap-1">
-        <span className="h-2 w-2 rounded-full bg-slate-400 animate-bounce [animation-delay:-0.3s]" />
-        <span className="h-2 w-2 rounded-full bg-slate-400 animate-bounce [animation-delay:-0.15s]" />
-        <span className="h-2 w-2 rounded-full bg-slate-400 animate-bounce" />
+        <span aria-hidden="true" className="h-2 w-2 rounded-full bg-slate-400 animate-bounce [animation-delay:-0.3s]" />
+        <span aria-hidden="true" className="h-2 w-2 rounded-full bg-slate-400 animate-bounce [animation-delay:-0.15s]" />
+        <span aria-hidden="true" className="h-2 w-2 rounded-full bg-slate-400 animate-bounce" />
       </div>
       {STATUS_LABELS[status] && (
-        <p className="text-xs text-slate-400 mt-1 ml-1">{STATUS_LABELS[status]}</p>
+        <p aria-hidden="true" className="text-xs text-slate-400 mt-1 ml-1">{STATUS_LABELS[status]}</p>
       )}
     </div>
   )
 }
 
 export function AIBubble({ reply, onReply, postId }) {
-  const isLoading = reply.status === 'analyzing' || reply.status === 'querying' || reply.status === 'explaining'
+  const isLoading = reply.status in STATUS_LABELS
   const isError   = reply.status === 'error'
 
   return (
@@ -39,7 +39,7 @@ export function AIBubble({ reply, onReply, postId }) {
           {isLoading ? (
             <TypingIndicator status={reply.status} />
           ) : isError ? (
-            <div className="rounded-xl bg-slate-100 dark:bg-slate-800 px-3.5 py-2.5 text-sm text-red-400 leading-relaxed">
+            <div role="alert" className="rounded-xl bg-slate-100 dark:bg-slate-800 px-3.5 py-2.5 text-sm text-red-400 leading-relaxed">
               {reply.error ?? 'Something went wrong.'}
             </div>
           ) : (
