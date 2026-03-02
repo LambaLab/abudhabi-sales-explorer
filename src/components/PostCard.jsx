@@ -111,6 +111,15 @@ function ReplyInput({ postId, onSubmit, disabled }) {
 export function PostCard({ post, onReply, isActive, onCancel, onDeepAnalysis, chartType = 'bar' }) {
   const [copied, setCopied] = useState(false)
   const [dateRange, setDateRange] = useState({ dateFrom: '', dateTo: '' })
+  const bottomRef = useRef(null)
+
+  // Auto-scroll to latest reply when it finishes streaming
+  const lastReply = post.replies?.at(-1)
+  useEffect(() => {
+    if (lastReply?.status === 'done') {
+      bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+    }
+  }, [lastReply?.status])
 
   const isBodyLoading = post.status === 'analyzing' || post.status === 'querying' || post.status === 'explaining'
   const isStreaming   = post.status === 'explaining'
@@ -279,10 +288,13 @@ export function PostCard({ post, onReply, isActive, onCancel, onDeepAnalysis, ch
 
       {/* ── Thread: replies ── */}
       {post.replies?.length > 0 && (
-        <div className="space-y-4 pt-1 border-t border-slate-700/40">
-          {post.replies.map(reply => (
-            <ReplyCard key={reply.id} reply={reply} />
-          ))}
+        <div className="border-t border-slate-200 dark:border-slate-700/40 pt-2">
+          <div className="max-h-[420px] overflow-y-auto scroll-smooth space-y-3 pr-1">
+            {post.replies.map(reply => (
+              <ReplyCard key={reply.id} reply={reply} onReply={onReply} postId={post.id} />
+            ))}
+            <div ref={bottomRef} />
+          </div>
         </div>
       )}
 
