@@ -21,6 +21,7 @@ function makeQuery(resolvedValue = { data: [], error: null }) {
     single:  vi.fn().mockReturnThis(),
     upsert:  vi.fn().mockResolvedValue({ error: null }),
     delete:  vi.fn().mockReturnThis(),
+    catch:   vi.fn().mockReturnThis(),
     then:    (cb) => Promise.resolve(resolvedValue).then(cb),
   }
   return q
@@ -172,5 +173,43 @@ describe('useFeed', () => {
     act(() => result.current.patchReply('p1', 'r1', { status: 'done', analysisText: 'reply done' }))
     expect(mockFrom).toHaveBeenCalledWith('replies')
     expect(query.upsert).toHaveBeenCalled()
+  })
+
+  it('clears localStorage ad_posts_v3 on mount', async () => {
+    localStorage.setItem('ad_posts_v3', JSON.stringify([{ id: 'old' }]))
+    renderHook(() => useFeed({ user: null }))
+    await waitFor(() => {})
+    expect(localStorage.getItem('ad_posts_v3')).toBeNull()
+  })
+
+  it('real-time reply INSERT → appends reply to correct post', async () => {
+    const { result } = renderHook(() => useFeed({ user: null }))
+    await waitFor(() => {})
+    act(() => result.current.addPost({ id: 'p1', prompt: 'q', status: 'done', replies: [] }))
+
+    const replyRow = {
+      id: 'rep1', post_id: 'p1', user_id: 'u1',
+      created_at: new Date().toISOString(),
+      prompt: 'follow up', status: 'done', analysis_text: 'reply text',
+      author: { display_name: 'Bob', avatar_url: '' },
+    }
+    query = makeQuery({ data: replyRow, error: null })
+    mockFrom.mockReturnValue(query)
+
+    await act(async () => {
+      channel._fire('INSERT', 'replies', { new: { id: 'rep1' } })
+      await new Promise(r => setTimeout(r, 0))
+    })
+
+    const post = result.current.posts.find(p => p.id === 'p1')
+    expect(post?.replies).toHaveLength(1)
+    expect(post?.replies[0].id).toBe('rep1')
+  })
+
+  it('calls removeChannel on unmount', async () => {
+    const { unmount } = renderHook(() => useFeed({ user: null }))
+    await waitFor(() => {})
+    unmount()
+    expect(mockRemoveChannel).toHaveBeenCalled()
   })
 })

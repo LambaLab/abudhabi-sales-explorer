@@ -101,6 +101,7 @@ export function useFeed({ user }) {
         const post = next.find(p => p.id === id)
         if (post) {
           supabase.from('posts').upsert(toDbPost(post, userRef.current.id))
+            .catch(err => console.error('[useFeed] post upsert failed:', err))
         }
       }
       return next
@@ -110,6 +111,7 @@ export function useFeed({ user }) {
   const removePost = useCallback((id) => {
     setPosts(prev => prev.filter(p => p.id !== id))
     supabase.from('posts').delete().eq('id', id)
+      .catch(err => console.error('[useFeed] post delete failed:', err))
   }, [])
 
   const getPost = useCallback((id) => posts.find(p => p.id === id), [posts])
@@ -147,6 +149,7 @@ export function useFeed({ user }) {
         const reply = post?.replies?.find(r => r.id === replyId)
         if (reply) {
           supabase.from('replies').upsert(toDbReply(reply, postId, userRef.current.id))
+            .catch(err => console.error('[useFeed] reply upsert failed:', err))
         }
       }
       return next
