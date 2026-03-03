@@ -212,4 +212,58 @@ describe('useFeed', () => {
     unmount()
     expect(mockRemoveChannel).toHaveBeenCalled()
   })
+
+  // ── Supabase v2 thenable safety ─────────────────────────────────────────
+  // Supabase v2 query builders return thenables (.then) but NOT full Promises.
+  // They have NO .catch() method. Calling .catch() throws synchronously inside
+  // the setPosts updater, which React 18 propagates to the ErrorBoundary.
+  // The fix: replace .catch(fn) with .then(null, fn) and move side effects
+  // outside setPosts updaters.
+
+  it('patchPost does not throw when upsert returns a thenable without .catch (Supabase v2)', async () => {
+    const thenableOnly = { then: (resolve) => Promise.resolve({ error: null }).then(resolve) }
+    const noCatchQuery = { ...query, upsert: vi.fn().mockReturnValue(thenableOnly) }
+    mockFrom.mockReturnValue(noCatchQuery)
+
+    const fakeUser = { id: 'u1' }
+    const { result } = renderHook(() => useFeed({ user: fakeUser }))
+    await waitFor(() => {})
+    act(() => result.current.addPost({ id: 'p1', prompt: 'q', status: 'analyzing', createdAt: Date.now(), replies: [] }))
+
+    expect(() => {
+      act(() => result.current.patchPost('p1', { status: 'done', analysisText: 'done text' }))
+    }).not.toThrow()
+  })
+
+  it('patchReply does not throw when upsert returns a thenable without .catch (Supabase v2)', async () => {
+    const thenableOnly = { then: (resolve) => Promise.resolve({ error: null }).then(resolve) }
+    const noCatchQuery = { ...query, upsert: vi.fn().mockReturnValue(thenableOnly) }
+    mockFrom.mockReturnValue(noCatchQuery)
+
+    const fakeUser = { id: 'u1' }
+    const { result } = renderHook(() => useFeed({ user: fakeUser }))
+    await waitFor(() => {})
+    act(() => result.current.addPost({ id: 'p1', prompt: 'q', status: 'done', replies: [] }))
+    act(() => result.current.addReply('p1', { id: 'r1', prompt: 'follow', createdAt: Date.now(), status: 'analyzing' }))
+
+    expect(() => {
+      act(() => result.current.patchReply('p1', 'r1', { status: 'done', analysisText: 'reply done' }))
+    }).not.toThrow()
+  })
+
+  it('removePost does not throw when delete chain returns a thenable without .catch (Supabase v2)', async () => {
+    const thenableOnly = { then: (resolve) => Promise.resolve({ error: null }).then(resolve) }
+    const eqSpy = vi.fn().mockReturnValue(thenableOnly)
+    const noCatchQuery = { ...query, delete: vi.fn().mockReturnValue({ eq: eqSpy }) }
+    mockFrom.mockReturnValue(noCatchQuery)
+
+    const fakeUser = { id: 'u1' }
+    const { result } = renderHook(() => useFeed({ user: fakeUser }))
+    await waitFor(() => {})
+    act(() => result.current.addPost({ id: 'p1', prompt: 'q', status: 'done', replies: [] }))
+
+    expect(() => {
+      act(() => result.current.removePost('p1'))
+    }).not.toThrow()
+  })
 })

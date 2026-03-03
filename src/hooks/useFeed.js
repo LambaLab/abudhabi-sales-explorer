@@ -20,9 +20,12 @@ const POST_SELECT = `
 export function useFeed({ user }) {
   const [posts, setPosts] = useState([])
   const userRef           = useRef(user)
+  // Mirrors posts state so side effects outside updaters can read current posts
+  const postsRef          = useRef([])
 
-  // Keep userRef current without recreating callbacks
+  // Keep refs current without recreating callbacks
   useEffect(() => { userRef.current = user }, [user])
+  useEffect(() => { postsRef.current = posts }, [posts])
 
   // Load from Supabase on mount + real-time subscriptions
   useEffect(() => {
@@ -95,23 +98,21 @@ export function useFeed({ user }) {
   }, [])
 
   const patchPost = useCallback((id, partial) => {
-    setPosts(prev => {
-      const next = prev.map(p => p.id === id ? { ...p, ...partial } : p)
-      if (partial.status === 'done' && userRef.current) {
-        const post = next.find(p => p.id === id)
-        if (post) {
-          supabase.from('posts').upsert(toDbPost(post, userRef.current.id))
-            .catch(err => console.error('[useFeed] post upsert failed:', err))
-        }
-      }
-      return next
-    })
+    // Pure state update — no side effects inside the updater (React 18 may call it multiple times)
+    setPosts(prev => prev.map(p => p.id === id ? { ...p, ...partial } : p))
+    // Supabase side effect runs OUTSIDE the updater
+    if (partial.status === 'done' && userRef.current) {
+      const base = postsRef.current.find(p => p.id === id) ?? {}
+      const post = { ...base, ...partial }
+      supabase.from('posts').upsert(toDbPost(post, userRef.current.id))
+        .then(null, err => console.error('[useFeed] post upsert failed:', err))
+    }
   }, [])
 
   const removePost = useCallback((id) => {
     setPosts(prev => prev.filter(p => p.id !== id))
     supabase.from('posts').delete().eq('id', id)
-      .catch(err => console.error('[useFeed] post delete failed:', err))
+      .then(null, err => console.error('[useFeed] post delete failed:', err))
   }, [])
 
   const getPost = useCallback((id) => posts.find(p => p.id === id), [posts])
@@ -134,26 +135,24 @@ export function useFeed({ user }) {
   }, [])
 
   const patchReply = useCallback((postId, replyId, partial) => {
-    setPosts(prev => {
-      const next = prev.map(p => {
-        if (p.id !== postId) return p
-        return {
-          ...p,
-          replies: (p.replies ?? []).map(r =>
-            r.id === replyId ? { ...r, ...partial } : r
-          ),
-        }
-      })
-      if (partial.status === 'done' && userRef.current) {
-        const post  = next.find(p => p.id === postId)
-        const reply = post?.replies?.find(r => r.id === replyId)
-        if (reply) {
-          supabase.from('replies').upsert(toDbReply(reply, postId, userRef.current.id))
-            .catch(err => console.error('[useFeed] reply upsert failed:', err))
-        }
+    // Pure state update — no side effects inside the updater (React 18 may call it multiple times)
+    setPosts(prev => prev.map(p => {
+      if (p.id !== postId) return p
+      return {
+        ...p,
+        replies: (p.replies ?? []).map(r =>
+          r.id === replyId ? { ...r, ...partial } : r
+        ),
       }
-      return next
-    })
+    }))
+    // Supabase side effect runs OUTSIDE the updater
+    if (partial.status === 'done' && userRef.current) {
+      const post  = postsRef.current.find(p => p.id === postId)
+      const base  = post?.replies?.find(r => r.id === replyId) ?? {}
+      const reply = { ...base, ...partial }
+      supabase.from('replies').upsert(toDbReply(reply, postId, userRef.current.id))
+        .then(null, err => console.error('[useFeed] reply upsert failed:', err))
+    }
   }, [])
 
   return { posts, addPost, removePost, getPost, patchPost, addReply, patchReply }
