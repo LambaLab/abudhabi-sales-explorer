@@ -7,12 +7,26 @@
  *   onClose   — called when backdrop or × is clicked
  *   onSignIn  — called when Google sign-in button is clicked
  */
+import { useEffect } from 'react'
+
 export function SignInModal({ open, onClose, onSignIn }) {
+  useEffect(() => {
+    if (!open) return
+    function onKey(e) {
+      if (e.key === 'Escape') onClose()
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [open, onClose])
+
   if (!open) return null
 
   return (
     /* Backdrop */
     <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="signin-modal-title"
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
       onClick={onClose}
     >
@@ -37,7 +51,7 @@ export function SignInModal({ open, onClose, onSignIn }) {
 
         {/* Headline */}
         <div className="text-center space-y-1">
-          <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
+          <h2 id="signin-modal-title" className="text-lg font-semibold text-slate-900 dark:text-white">
             Sign in to join the conversation
           </h2>
           <p className="text-sm text-slate-500 dark:text-slate-400">

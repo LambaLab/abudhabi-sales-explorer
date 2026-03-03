@@ -39,4 +39,11 @@ describe('SignInModal', () => {
     fireEvent.click(container.firstChild)
     expect(onClose).toHaveBeenCalledTimes(1)
   })
+
+  it('calls onClose when Escape key is pressed', () => {
+    const onClose = vi.fn()
+    render(<SignInModal open={true} onClose={onClose} onSignIn={() => {}} />)
+    fireEvent.keyDown(document, { key: 'Escape' })
+    expect(onClose).toHaveBeenCalledTimes(1)
+  })
 })
