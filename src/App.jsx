@@ -165,6 +165,7 @@ export default function App() {
                 onDeepAnalysis={analyzeDeep}
                 chartType={settings.chartType}
                 user={user}
+                onSignIn={signInWithGoogle}
                 onDelete={removePost}
               />
               <GuestWall

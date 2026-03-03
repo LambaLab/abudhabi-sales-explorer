@@ -5,6 +5,7 @@ import { ReplyCard }       from './ReplyCard'
 import { buildShareUrl }   from '../utils/deeplink'
 import { stripHint }       from '../utils/stripHint'
 import { ThinkingLabel }   from './ThinkingLabel'
+import { SignInModal }     from './SignInModal'
 
 function Skeleton({ className }) {
   return <div className={`animate-pulse rounded bg-slate-700/50 ${className}`} />
@@ -109,11 +110,17 @@ function ReplyInput({ postId, onSubmit, disabled }) {
   )
 }
 
-export function PostCard({ post, onReply, isActive, onCancel, onDeepAnalysis, chartType = 'bar', onDelete, currentUser }) {
+export function PostCard({ post, onReply, isActive, onCancel, onDeepAnalysis, chartType = 'bar', onDelete, currentUser, user, onSignIn }) {
   const [copied, setCopied] = useState(false)
   const [dateRange, setDateRange] = useState({ dateFrom: '', dateTo: '' })
+  const [showSignIn, setShowSignIn] = useState(false)
   const bottomRef   = useRef(null)
   const didMountRef = useRef(false)
+
+  function requireAuth(fn) {
+    if (user) return fn()
+    setShowSignIn(true)
+  }
 
   // Auto-scroll to latest reply when it finishes streaming (skip on initial mount)
   const lastReply = post.replies?.at(-1)
@@ -334,7 +341,7 @@ export function PostCard({ post, onReply, isActive, onCancel, onDeepAnalysis, ch
             <button
               key={`${i}-${option}`}
               type="button"
-              onClick={() => onReply(post.id, option)}
+              onClick={() => requireAuth(() => onReply(post.id, option))}
               disabled={hasActiveReply}
               className="rounded-full border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-1.5 text-sm text-slate-700 dark:text-slate-300 hover:border-accent hover:text-accent transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
             >
@@ -347,9 +354,27 @@ export function PostCard({ post, onReply, isActive, onCancel, onDeepAnalysis, ch
       {/* ── Inline reply input (only when post is done and onReply provided) ── */}
       {onReply && isDone && (
         <div className="pt-1">
-          <ReplyInput postId={post.id} onSubmit={onReply} disabled={hasActiveReply} />
+          {user ? (
+            <ReplyInput postId={post.id} onSubmit={onReply} disabled={hasActiveReply} />
+          ) : (
+            <button
+              onClick={() => setShowSignIn(true)}
+              className="text-sm text-slate-400 dark:text-slate-500 hover:text-accent dark:hover:text-accent transition-colors flex items-center gap-1.5"
+            >
+              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+              </svg>
+              Ask a follow-up
+            </button>
+          )}
         </div>
       )}
+
+      <SignInModal
+        open={showSignIn}
+        onClose={() => setShowSignIn(false)}
+        onSignIn={() => { setShowSignIn(false); onSignIn?.() }}
+      />
     </article>
   )
 }

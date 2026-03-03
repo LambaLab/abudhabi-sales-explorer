@@ -2,7 +2,7 @@ import { PostCard } from './PostCard'
 
 const GUEST_LIMIT = 3
 
-export function PostFeed({ posts, onReply, activePostId, onCancel, onDeepAnalysis, chartType, user, onDelete }) {
+export function PostFeed({ posts, onReply, activePostId, onCancel, onDeepAnalysis, chartType, user, onDelete, onSignIn }) {
   if (!posts.length) {
     return (
       <div className="py-16 text-center space-y-2">
@@ -31,6 +31,8 @@ export function PostFeed({ posts, onReply, activePostId, onCancel, onDeepAnalysi
               chartType={chartType}
               onDelete={post.userId === user?.id ? onDelete : undefined}
               currentUser={user}
+              user={user}
+              onSignIn={onSignIn}
             />
           </div>
         )
