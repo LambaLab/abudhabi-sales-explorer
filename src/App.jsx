@@ -3,14 +3,16 @@ import { useEffect, useRef, useState } from 'react'
 import { useDuckDB }    from './hooks/useDuckDB'
 import { useAppData }   from './hooks/useAppData'
 import { useAnalysis }  from './hooks/useAnalysis'
-import { usePostStore } from './hooks/usePostStore'
+import { useFeed }      from './hooks/useFeed'
+import { useAuth }      from './hooks/useAuth'
 import { useTheme }     from './hooks/useTheme'
 import { useSettings }  from './hooks/useSettings'
 import { ChatInput }    from './components/ChatInput'
 import { PostFeed }     from './components/PostFeed'
 import { PostCard }     from './components/PostCard'
 import { ChartTab }     from './components/ChartTab'
-import { parseShareUrl } from './utils/deeplink'
+import { GuestWall }    from './components/GuestWall'
+import { FeedTabs }     from './components/FeedTabs'
 
 export default function App() {
   const { theme, toggle: toggleTheme } = useTheme()
@@ -19,8 +21,13 @@ export default function App() {
   const { ready, error: dbError } = useDuckDB()
   const { meta }                  = useAppData(ready)
 
-  const store = usePostStore()
+  const { user, loading: authLoading, signInWithGoogle, signOut } = useAuth()
+  const store = useFeed({ user })
   const { posts, addPost, removePost, getPost, patchPost, addReply, patchReply } = store
+
+  // Posts shown in feed — controlled by FeedTabs
+  const [displayPosts, setDisplayPosts] = useState(posts)
+  useEffect(() => { setDisplayPosts(posts) }, [posts])
 
   const { analyze, analyzeReply, analyzeDeep, activePostId, cancel } = useAnalysis(meta, {
     addPost, patchPost, addReply, patchReply, getPost,
@@ -59,37 +66,6 @@ export default function App() {
   // Inject default date range hint into analyze prompt
   function analyzeWithSettings(prompt) {
     return analyze(prompt + getDateRangeHint())
-  }
-
-  // Handle deeplink
-  const { postId: deeplinkPostId, post: urlPost } = parseShareUrl()
-  const deeplinkPost = deeplinkPostId ? (getPost(deeplinkPostId) ?? urlPost) : null
-
-  useEffect(() => {
-    if (urlPost && !getPost(urlPost.id)) addPost(urlPost)
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: runs
-    // once on mount; addPost/getPost are stable references; urlPost is immutable
-  }, [])
-
-  // ── Deeplink view ──────────────────────────────────────────────────────────
-  if (deeplinkPost) {
-    return (
-      <div className="min-h-screen bg-slate-50 dark:bg-[#0f172a] text-slate-900 dark:text-slate-100">
-        <header className="border-b border-slate-200 dark:border-slate-800 px-6 py-4">
-          <div className="mx-auto max-w-2xl flex items-center justify-between">
-            <a href="/" className="text-sm text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors flex items-center gap-1.5">
-              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7"/>
-              </svg>
-              Back to explorer
-            </a>
-          </div>
-        </header>
-        <main className="mx-auto max-w-2xl px-6 py-8">
-          <PostCard post={deeplinkPost} />
-        </main>
-      </div>
-    )
   }
 
   // ── Main view ──────────────────────────────────────────────────────────────
@@ -134,27 +110,56 @@ export default function App() {
             ))}
           </div>
 
-          {/* Version + Theme toggle */}
+          {/* Auth + Version + Theme */}
           <div className="shrink-0 flex items-center gap-2">
-          <span className="text-xs text-slate-400 dark:text-slate-500 font-mono hidden sm:inline select-none">
-            v {__APP_VERSION__}
-          </span>
-          <button
-            onClick={toggleTheme}
-            className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
-            aria-label="Toggle theme"
-          >
-            {theme === 'light' ? (
-              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
-              </svg>
-            ) : (
-              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <circle cx="12" cy="12" r="5"/>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
-              </svg>
+            {!authLoading && (
+              user ? (
+                <>
+                  {user.user_metadata?.avatar_url && (
+                    <img
+                      src={user.user_metadata.avatar_url}
+                      alt={user.user_metadata?.full_name ?? 'You'}
+                      className="h-7 w-7 rounded-full object-cover"
+                    />
+                  )}
+                  <span className="text-xs text-slate-500 dark:text-slate-400 hidden sm:inline max-w-[120px] truncate">
+                    {user.user_metadata?.full_name}
+                  </span>
+                  <button
+                    onClick={signOut}
+                    className="text-xs text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors hidden sm:inline"
+                  >
+                    Sign out
+                  </button>
+                </>
+              ) : (
+                <button
+                  onClick={signInWithGoogle}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+                >
+                  Sign in
+                </button>
+              )
             )}
-          </button>
+            <span className="text-xs text-slate-400 dark:text-slate-500 font-mono hidden sm:inline select-none">
+              v {__APP_VERSION__}
+            </span>
+            <button
+              onClick={toggleTheme}
+              className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
+              aria-label="Toggle theme"
+            >
+              {theme === 'light' ? (
+                <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
+                </svg>
+              ) : (
+                <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <circle cx="12" cy="12" r="5"/>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+                </svg>
+              )}
+            </button>
           </div>
         </div>
       </header>
@@ -164,13 +169,25 @@ export default function App() {
         <div className="relative flex-1 flex flex-col min-h-0">
           <main ref={mainRef} className="flex-1 overflow-y-auto">
             <div className="mx-auto max-w-2xl px-4 pt-4 pb-24 space-y-4">
-              <PostFeed
+              <FeedTabs
                 posts={posts}
+                user={user}
+                onPostsChange={setDisplayPosts}
+              />
+              <PostFeed
+                posts={displayPosts}
                 onReply={(postId, prompt) => analyzeReply(postId, prompt + getDateRangeHint())}
                 activePostId={activePostId}
                 onCancel={cancel}
                 onDeepAnalysis={analyzeDeep}
                 chartType={settings.chartType}
+                user={user}
+                onDelete={removePost}
+              />
+              <GuestWall
+                user={user}
+                postsCount={displayPosts.length}
+                onSignIn={signInWithGoogle}
               />
               <div ref={feedEndRef} />
             </div>
@@ -192,18 +209,20 @@ export default function App() {
             </div>
           )}
 
-          {/* Frosted bottom bar — absolute so content scrolls behind it */}
-          <div className="absolute bottom-0 left-0 right-0 px-4 py-3 z-10 bg-slate-50/75 dark:bg-[#0f172a]/75 backdrop-blur-md">
-            <div className="mx-auto max-w-2xl">
-              <ChatInput
-                onSubmit={analyzeWithSettings}
-                onStop={cancel}
-                isLoading={isLoading || !ready}
-                settings={settings}
-                onSettingsChange={updateSettings}
-              />
+          {/* Only signed-in users can submit queries */}
+          {user && (
+            <div className="absolute bottom-0 left-0 right-0 px-4 py-3 z-10 bg-slate-50/75 dark:bg-[#0f172a]/75 backdrop-blur-md">
+              <div className="mx-auto max-w-2xl">
+                <ChatInput
+                  onSubmit={analyzeWithSettings}
+                  onStop={cancel}
+                  isLoading={isLoading || !ready}
+                  settings={settings}
+                  onSettingsChange={updateSettings}
+                />
+              </div>
             </div>
-          </div>
+          )}
         </div>
       )}
 
