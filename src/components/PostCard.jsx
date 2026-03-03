@@ -109,7 +109,7 @@ function ReplyInput({ postId, onSubmit, disabled }) {
   )
 }
 
-export function PostCard({ post, onReply, isActive, onCancel, onDeepAnalysis, chartType = 'bar' }) {
+export function PostCard({ post, onReply, isActive, onCancel, onDeepAnalysis, chartType = 'bar', onDelete, currentUser }) {
   const [copied, setCopied] = useState(false)
   const [dateRange, setDateRange] = useState({ dateFrom: '', dateTo: '' })
   const bottomRef   = useRef(null)
@@ -167,6 +167,32 @@ export function PostCard({ post, onReply, isActive, onCancel, onDeepAnalysis, ch
 
   return (
     <article className="rounded-xl border border-slate-200 dark:border-slate-700/60 bg-white dark:bg-slate-800/30 p-5 space-y-4 shadow-sm dark:shadow-none">
+      {/* Author bar */}
+      {post.author && (
+        <div className="flex items-center gap-2 mb-2">
+          {post.author.avatar_url ? (
+            <img
+              src={post.author.avatar_url}
+              alt={post.author.display_name ?? 'User'}
+              className="h-5 w-5 rounded-full object-cover shrink-0"
+            />
+          ) : (
+            <div className="h-5 w-5 rounded-full bg-slate-200 dark:bg-slate-700 shrink-0" aria-hidden="true" />
+          )}
+          <span className="text-xs font-medium text-slate-500 dark:text-slate-400 truncate">
+            {post.author.display_name}
+          </span>
+          {onDelete && (
+            <button
+              onClick={() => onDelete(post.id)}
+              className="ml-auto text-xs text-red-400 hover:text-red-600 transition-colors shrink-0"
+              aria-label="Delete post"
+            >
+              Delete
+            </button>
+          )}
+        </div>
+      )}
       {/* ── Header ── */}
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
