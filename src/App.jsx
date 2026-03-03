@@ -9,10 +9,10 @@ import { useTheme }     from './hooks/useTheme'
 import { useSettings }  from './hooks/useSettings'
 import { ChatInput }    from './components/ChatInput'
 import { PostFeed }     from './components/PostFeed'
-import { PostCard }     from './components/PostCard'
 import { ChartTab }     from './components/ChartTab'
 import { GuestWall }    from './components/GuestWall'
 import { FeedTabs }     from './components/FeedTabs'
+import { ProfileMenu }  from './components/ProfileMenu'
 
 export default function App() {
   const { theme, toggle: toggleTheme } = useTheme()
@@ -113,33 +113,16 @@ export default function App() {
           {/* Auth + Version + Theme */}
           <div className="shrink-0 flex items-center gap-2">
             {!authLoading && (
-              user ? (
-                <>
-                  {user.user_metadata?.avatar_url && (
-                    <img
-                      src={user.user_metadata.avatar_url}
-                      alt={user.user_metadata?.full_name ?? 'You'}
-                      className="h-7 w-7 rounded-full object-cover"
-                    />
-                  )}
-                  <span className="text-xs text-slate-500 dark:text-slate-400 hidden sm:inline max-w-[120px] truncate">
-                    {user.user_metadata?.full_name}
-                  </span>
+              user
+                ? <ProfileMenu user={user} onSignOut={signOut} />
+                : (
                   <button
-                    onClick={signOut}
-                    className="text-xs text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors hidden sm:inline"
+                    onClick={signInWithGoogle}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
                   >
-                    Sign out
+                    Sign in
                   </button>
-                </>
-              ) : (
-                <button
-                  onClick={signInWithGoogle}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
-                >
-                  Sign in
-                </button>
-              )
+                )
             )}
             <span className="text-xs text-slate-400 dark:text-slate-500 font-mono hidden sm:inline select-none">
               v {__APP_VERSION__}
