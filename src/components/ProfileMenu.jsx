@@ -18,7 +18,8 @@ function initials(name = '') {
  *   onSignOut  — callback
  */
 export function ProfileMenu({ user, onSignOut }) {
-  const [open, setOpen] = useState(false)
+  const [open, setOpen]         = useState(false)
+  const [imgError, setImgError] = useState(false)
   const wrapperRef = useRef(null)
 
   // Close on click outside
@@ -54,12 +55,12 @@ export function ProfileMenu({ user, onSignOut }) {
         aria-expanded={open}
         aria-haspopup="true"
       >
-        {avatarUrl ? (
+        {avatarUrl && !imgError ? (
           <img
             src={avatarUrl}
             alt={name}
             className="h-full w-full object-cover"
-            referrerPolicy="no-referrer"
+            onError={() => setImgError(true)}
           />
         ) : (
           <span className="h-full w-full flex items-center justify-center bg-accent text-white text-xs font-semibold select-none">

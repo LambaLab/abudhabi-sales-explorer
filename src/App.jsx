@@ -110,20 +110,8 @@ export default function App() {
             ))}
           </div>
 
-          {/* Auth + Version + Theme */}
+          {/* Version + Theme + Profile (profile is rightmost) */}
           <div className="shrink-0 flex items-center gap-2">
-            {!authLoading && (
-              user
-                ? <ProfileMenu user={user} onSignOut={signOut} />
-                : (
-                  <button
-                    onClick={signInWithGoogle}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
-                  >
-                    Sign in
-                  </button>
-                )
-            )}
             <span className="text-xs text-slate-400 dark:text-slate-500 font-mono hidden sm:inline select-none">
               v {__APP_VERSION__}
             </span>
@@ -143,6 +131,18 @@ export default function App() {
                 </svg>
               )}
             </button>
+            {!authLoading && (
+              user
+                ? <ProfileMenu user={user} onSignOut={signOut} />
+                : (
+                  <button
+                    onClick={signInWithGoogle}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+                  >
+                    Sign in
+                  </button>
+                )
+            )}
           </div>
         </div>
       </header>

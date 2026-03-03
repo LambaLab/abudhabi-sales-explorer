@@ -7,11 +7,15 @@ import { Component } from 'react'
 export class ErrorBoundary extends Component {
   constructor(props) {
     super(props)
-    this.state = { hasError: false }
+    this.state = { hasError: false, message: '', stack: '' }
   }
 
-  static getDerivedStateFromError() {
-    return { hasError: true }
+  static getDerivedStateFromError(error) {
+    return {
+      hasError: true,
+      message:  error?.message ?? String(error),
+      stack:    error?.stack   ?? '',
+    }
   }
 
   componentDidCatch(error, info) {
@@ -22,7 +26,7 @@ export class ErrorBoundary extends Component {
     if (this.state.hasError) {
       return (
         <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-[#0f172a]">
-          <div className="text-center space-y-4 px-6">
+          <div className="text-center space-y-4 px-6 max-w-lg w-full">
             <div className="text-5xl select-none">🐙</div>
             <h1 className="text-lg font-semibold text-slate-800 dark:text-slate-100">
               Something went wrong
@@ -36,6 +40,18 @@ export class ErrorBoundary extends Component {
             >
               Reload
             </button>
+            {/* Error details — helps diagnose the root cause */}
+            {this.state.message && (
+              <details className="text-left mt-4">
+                <summary className="text-xs text-slate-400 cursor-pointer hover:text-slate-600 select-none">
+                  Error details
+                </summary>
+                <pre className="mt-2 p-3 rounded-lg bg-slate-100 dark:bg-slate-800 text-xs text-red-500 dark:text-red-400 overflow-auto max-h-48 whitespace-pre-wrap break-all">
+                  {this.state.message}
+                  {this.state.stack ? `\n\n${this.state.stack}` : ''}
+                </pre>
+              </details>
+            )}
           </div>
         </div>
       )
