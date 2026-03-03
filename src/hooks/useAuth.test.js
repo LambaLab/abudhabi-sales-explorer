@@ -70,6 +70,17 @@ describe('useAuth', () => {
     expect(result.current.user).toEqual(fakeUser)
   })
 
+  it('loading is true before session resolves and false after', async () => {
+    let resolveSession
+    mockGetSession.mockReturnValue(new Promise(res => { resolveSession = res }))
+    const { result } = renderHook(() => useAuth())
+    expect(result.current.loading).toBe(true)
+    await act(async () => {
+      resolveSession({ data: { session: null } })
+    })
+    expect(result.current.loading).toBe(false)
+  })
+
   it('unsubscribes on unmount', async () => {
     const { unmount } = renderHook(() => useAuth())
     await act(async () => {})
