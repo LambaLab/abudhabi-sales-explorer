@@ -32,7 +32,7 @@ export function AIBubble({ reply, onReply, postId }) {
       <div className="flex justify-start items-end gap-2">
         {/* Octopus avatar */}
         <div aria-hidden="true" className="shrink-0 h-6 w-6 rounded-full overflow-hidden bg-slate-200 dark:bg-slate-700 flex items-center justify-center">
-          <img src="/octopus.svg" alt="" className="h-full w-full object-contain p-0.5" />
+          <img src="/octopus.png" alt="" className="h-full w-full object-contain p-0.5" />
         </div>
 
         <div className="max-w-[80%]">

@@ -71,4 +71,11 @@ describe('AIBubble', () => {
     render(<AIBubble reply={{ ...BASE, status: 'error', error: 'Failed to load' }} onReply={() => {}} postId="p1" />)
     expect(screen.getByText('Failed to load')).toBeInTheDocument()
   })
+
+  it('renders octopus.png (not octopus.svg) as the AI avatar', () => {
+    const reply = { status: 'done', analysisText: 'hello', createdAt: Date.now() }
+    render(<AIBubble reply={reply} onReply={() => {}} postId="p1" />)
+    const img = document.querySelector('img[src="/octopus.png"]')
+    expect(img).toBeTruthy()
+  })
 })
