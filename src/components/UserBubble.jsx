@@ -1,11 +1,12 @@
 import { relativeTime } from '../utils/relativeTime'
+import { stripHint }    from '../utils/stripHint'
 
 export function UserBubble({ prompt, createdAt }) {
   return (
     <div className="flex justify-end items-end gap-2">
       <div className="flex flex-col items-end max-w-[80%]">
         <div className="rounded-xl bg-accent text-white px-3.5 py-2.5 text-sm leading-relaxed">
-          {prompt}
+          {stripHint(prompt)}
         </div>
         <p className="text-xs text-slate-400 mt-1">{relativeTime(createdAt)}</p>
       </div>
