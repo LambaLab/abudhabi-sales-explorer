@@ -31,7 +31,7 @@ export default function App() {
   const outletContext = {
     ready, dbError, meta,
     user, authLoading, signInWithGoogle, signOut,
-    posts, addPost, removePost, store,
+    posts, addPost, removePost,
     analyze, analyzeReply, analyzeDeep, activePostId, cancel,
     settings, updateSettings, getDateRangeHint,
   }

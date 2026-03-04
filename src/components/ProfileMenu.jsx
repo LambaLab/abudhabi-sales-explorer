@@ -1,15 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-
-/** Derive up-to-2-letter initials from a full name */
-function initials(name = '') {
-  return name
-    .trim()
-    .split(/\s+/)
-    .slice(0, 2)
-    .map(w => w[0]?.toUpperCase() ?? '')
-    .join('')
-}
+import { initials }    from '../utils/initials'
 
 /**
  * ProfileMenu — avatar button → dropdown with name, email, profile link, sign-out.

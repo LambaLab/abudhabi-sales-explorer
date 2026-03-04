@@ -12,13 +12,14 @@ const POST_SELECT = `
  * useProfileFeed — fetch a user's profile info, posts, and reply-posts.
  *
  * @param {string|null} userId — auth user ID (from URL params)
- * @returns {{ profile, posts, replyPosts, loading }}
+ * @returns {{ profile, posts, replyPosts, loading, error }}
  */
 export function useProfileFeed(userId) {
   const [profile,    setProfile]    = useState(null)
   const [posts,      setPosts]      = useState([])
   const [replyPosts, setReplyPosts] = useState([])
   const [loading,    setLoading]    = useState(true)
+  const [error,      setError]      = useState(null)
 
   useEffect(() => {
     if (!userId) {
@@ -27,6 +28,7 @@ export function useProfileFeed(userId) {
     }
 
     setLoading(true)
+    setError(null)
 
     // Parallel: profile info + user's posts + reply posts
     Promise.all([
@@ -36,7 +38,10 @@ export function useProfileFeed(userId) {
         .select('id, display_name, avatar_url')
         .eq('id', userId)
         .single()
-        .then(({ data }) => setProfile(data ?? null)),
+        .then(({ data, error: err }) => {
+          if (err) { setError(err.message ?? 'Failed to load profile'); return }
+          setProfile(data ?? null)
+        }),
 
       // 2. Posts authored by this user
       supabase
@@ -44,7 +49,8 @@ export function useProfileFeed(userId) {
         .select(POST_SELECT)
         .eq('user_id', userId)
         .order('created_at', { ascending: false })
-        .then(({ data }) => {
+        .then(({ data, error: err }) => {
+          if (err) { setError(err.message ?? 'Failed to load posts'); return }
           setPosts(data ? data.map(fromDbPost) : [])
         }),
 
@@ -53,7 +59,8 @@ export function useProfileFeed(userId) {
         .from('replies')
         .select('post_id')
         .eq('user_id', userId)
-        .then(({ data: replyRows }) => {
+        .then(({ data: replyRows, error: err }) => {
+          if (err) { setError(err.message ?? 'Failed to load replies'); return }
           if (!replyRows?.length) { setReplyPosts([]); return }
           const postIds = [...new Set(replyRows.map(r => r.post_id))]
           return supabase
@@ -61,12 +68,13 @@ export function useProfileFeed(userId) {
             .select(POST_SELECT)
             .in('id', postIds)
             .order('created_at', { ascending: false })
-            .then(({ data }) => {
+            .then(({ data, error: err2 }) => {
+              if (err2) { setError(err2.message ?? 'Failed to load reply posts'); return }
               setReplyPosts(data ? data.map(fromDbPost) : [])
             })
         }),
     ]).finally(() => setLoading(false))
   }, [userId])
 
-  return { profile, posts, replyPosts, loading }
+  return { profile, posts, replyPosts, loading, error }
 }

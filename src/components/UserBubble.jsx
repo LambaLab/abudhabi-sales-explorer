@@ -1,16 +1,7 @@
 import { useState } from 'react'
 import { relativeTime } from '../utils/relativeTime'
 import { stripHint }    from '../utils/stripHint'
-
-/** Derive up-to-2-letter initials from a full name */
-function initials(name = '') {
-  return name
-    .trim()
-    .split(/\s+/)
-    .slice(0, 2)
-    .map(w => w[0]?.toUpperCase() ?? '')
-    .join('')
-}
+import { initials }     from '../utils/initials'
 
 export function UserBubble({ prompt, createdAt, author }) {
   const [imgError, setImgError] = useState(false)

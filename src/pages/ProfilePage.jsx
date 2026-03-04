@@ -5,11 +5,7 @@ import { SignInModal }     from '../components/SignInModal'
 import { PostCard }        from '../components/PostCard'
 import { UserBubble }      from '../components/UserBubble'
 import { stripHint }       from '../utils/stripHint'
-
-/** Derive up-to-2-letter initials */
-function initials(name = '') {
-  return name.trim().split(/\s+/).slice(0, 2).map(w => w[0]?.toUpperCase() ?? '').join('')
-}
+import { initials }        from '../utils/initials'
 
 /** Compact card for Replies tab: post context + user's reply bubbles */
 function ReplyContextCard({ post, userId }) {
@@ -43,7 +39,7 @@ export default function ProfilePage({ ctx }) {
   const { userId }      = useParams()
   const navigate        = useNavigate()
   const { user, authLoading, signInWithGoogle } = ctx
-  const { profile, posts, replyPosts, loading } = useProfileFeed(userId)
+  const { profile, posts, replyPosts, loading, error } = useProfileFeed(userId)
   const [tab, setTab]   = useState('posts')
   const [imgError, setImgError] = useState(false)
 
@@ -69,6 +65,12 @@ export default function ProfilePage({ ctx }) {
   return (
     <main className="flex-1 overflow-y-auto">
       <div className="mx-auto max-w-2xl px-4 pt-6 pb-16">
+
+        {error && (
+          <div className="mb-4 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 px-4 py-2 text-sm text-red-700 dark:text-red-300">
+            {error}
+          </div>
+        )}
 
         {/* ── Profile header ── */}
         <div className="flex flex-col items-center gap-3 mb-6">
@@ -103,7 +105,7 @@ export default function ProfilePage({ ctx }) {
         </div>
 
         {/* ── Tabs ── */}
-        <div className="flex border-b border-slate-200 dark:border-slate-700 mb-4">
+        <div role="tablist" className="flex border-b border-slate-200 dark:border-slate-700 mb-4">
           {[['posts', 'Posts'], ['replies', 'Replies']].map(([id, label]) => (
             <button
               key={id}
