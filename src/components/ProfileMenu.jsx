@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
 
 /** Derive up-to-2-letter initials from a full name */
 function initials(name = '') {
@@ -11,7 +12,7 @@ function initials(name = '') {
 }
 
 /**
- * ProfileMenu — avatar button → dropdown with name, email, sign-out.
+ * ProfileMenu — avatar button → dropdown with name, email, profile link, sign-out.
  *
  * Props:
  *   user       — Supabase user object
@@ -21,6 +22,7 @@ export function ProfileMenu({ user, onSignOut }) {
   const [open, setOpen]         = useState(false)
   const [imgError, setImgError] = useState(false)
   const wrapperRef = useRef(null)
+  const navigate   = useNavigate()
 
   // Close on click outside
   useEffect(() => {
@@ -44,6 +46,7 @@ export function ProfileMenu({ user, onSignOut }) {
   const name      = user?.user_metadata?.full_name ?? ''
   const email     = user?.email ?? ''
   const avatarUrl = user?.user_metadata?.avatar_url ?? ''
+  const userId    = user?.id ?? ''
 
   return (
     <div ref={wrapperRef} className="relative">
@@ -80,6 +83,12 @@ export function ProfileMenu({ user, onSignOut }) {
 
           {/* Actions */}
           <div className="py-1">
+            <button
+              onClick={() => { setOpen(false); navigate(`/profile/${userId}`) }}
+              className="w-full text-left px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/60 transition-colors"
+            >
+              Profile
+            </button>
             <button
               onClick={() => { setOpen(false); onSignOut() }}
               className="w-full text-left px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/60 transition-colors"
