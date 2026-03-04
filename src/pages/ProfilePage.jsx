@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useProfileFeed }  from '../hooks/useProfileFeed'
 import { SignInModal }     from '../components/SignInModal'
 import { PostCard }        from '../components/PostCard'
+import { ChatInput }       from '../components/ChatInput'
 import { UserBubble }      from '../components/UserBubble'
 import { stripHint }       from '../utils/stripHint'
 import { initials }        from '../utils/initials'
@@ -66,7 +67,11 @@ function ReplyContextCard({ post, userId, user, onSignIn }) {
 export default function ProfilePage({ ctx }) {
   const { userId }      = useParams()
   const navigate        = useNavigate()
-  const { user, authLoading, signInWithGoogle } = ctx
+  const {
+    user, authLoading, signInWithGoogle,
+    analyze, getDateRangeHint, activePostId, cancel, ready,
+    settings, updateSettings,
+  } = ctx
   const { profile, posts, replyPosts, loading, error } = useProfileFeed(userId)
   const [tab, setTab]   = useState('posts')
   const [imgError, setImgError] = useState(false)
@@ -91,8 +96,8 @@ export default function ProfilePage({ ctx }) {
   const isOwnProfile = user?.id === userId
 
   return (
-    <main className="flex-1 overflow-y-auto">
-      <div className="mx-auto max-w-2xl px-4 pt-6 pb-16">
+    <main className="relative flex-1 overflow-y-auto">
+      <div className="mx-auto max-w-2xl px-4 pt-6 pb-24">
 
         {error && (
           <div className="mb-4 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 px-4 py-2 text-sm text-red-700 dark:text-red-300">
@@ -185,6 +190,24 @@ export default function ProfilePage({ ctx }) {
           )
         )}
       </div>
+
+      {/* ChatInput — own profile only */}
+      {isOwnProfile && !loading && (
+        <div className="absolute bottom-0 left-0 right-0 px-4 py-3 z-10 bg-slate-50/75 dark:bg-[#0f172a]/75 backdrop-blur-md">
+          <div className="mx-auto max-w-2xl">
+            <ChatInput
+              onSubmit={prompt => {
+                analyze(prompt + (getDateRangeHint?.() ?? ''))
+                navigate('/')
+              }}
+              onStop={cancel}
+              isLoading={activePostId !== null || !ready}
+              settings={settings ?? { chartType: 'bar' }}
+              onSettingsChange={updateSettings ?? (() => {})}
+            />
+          </div>
+        </div>
+      )}
     </main>
   )
 }

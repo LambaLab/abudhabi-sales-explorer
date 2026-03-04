@@ -18,6 +18,14 @@ vi.mock('../components/PostCard', () => ({
   PostCard: ({ post }) => <div data-testid="post-card">{post.analysisText}</div>,
 }))
 
+vi.mock('../components/ChatInput', () => ({
+  ChatInput: ({ onSubmit }) => (
+    <div data-testid="chat-input">
+      <button onClick={() => onSubmit && onSubmit('test query')}>submit</button>
+    </div>
+  ),
+}))
+
 import ProfilePage from './ProfilePage'
 
 function renderProfile(userId, ctx) {
@@ -123,5 +131,45 @@ describe('ProfilePage', () => {
     // PostCard now visible (showing analysisText from mock)
     expect(screen.getByTestId('post-card')).toBeTruthy()
     expect(screen.getByText('Al Reem is top.')).toBeTruthy()
+  })
+
+  it('shows ChatInput on own profile', () => {
+    useProfileFeed.mockReturnValue({
+      profile: { id: 'u1', display_name: 'Nagi', avatar_url: '' },
+      posts: [], replyPosts: [], loading: false, error: null,
+    })
+    renderProfile('u1', {
+      user: { id: 'u1' },
+      authLoading: false,
+      signInWithGoogle: vi.fn(),
+      analyze: vi.fn(),
+      getDateRangeHint: () => '',
+      activePostId: null,
+      cancel: vi.fn(),
+      ready: true,
+      settings: { chartType: 'bar' },
+      updateSettings: vi.fn(),
+    })
+    expect(screen.getByTestId('chat-input')).toBeTruthy()
+  })
+
+  it('does not show ChatInput on other profiles', () => {
+    useProfileFeed.mockReturnValue({
+      profile: { id: 'u2', display_name: 'Ada', avatar_url: '' },
+      posts: [], replyPosts: [], loading: false, error: null,
+    })
+    renderProfile('u2', {
+      user: { id: 'u1' },   // logged in as u1, viewing u2's profile
+      authLoading: false,
+      signInWithGoogle: vi.fn(),
+      analyze: vi.fn(),
+      getDateRangeHint: () => '',
+      activePostId: null,
+      cancel: vi.fn(),
+      ready: true,
+      settings: { chartType: 'bar' },
+      updateSettings: vi.fn(),
+    })
+    expect(screen.queryByTestId('chat-input')).toBeNull()
   })
 })
