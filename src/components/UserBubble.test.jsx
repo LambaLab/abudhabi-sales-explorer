@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
 import { UserBubble } from './UserBubble'
 
 describe('UserBubble', () => {
@@ -24,5 +24,26 @@ describe('UserBubble', () => {
   it('shows generic icon when author is null', () => {
     render(<UserBubble prompt="test" createdAt={Date.now()} author={null} />)
     expect(screen.queryByRole('img', { name: /.+/ })).toBeNull()
+  })
+
+  it('shows initials fallback when avatar image fails to load', () => {
+    render(<UserBubble
+      prompt="hello"
+      createdAt={Date.now()}
+      author={{ display_name: 'Nagi Salloum', avatar_url: 'http://broken.img/photo.jpg' }}
+    />)
+    const img = screen.getByRole('img', { hidden: true })
+    fireEvent.error(img)
+    // After error, initials 'NS' should appear
+    expect(screen.getByText('NS')).toBeTruthy()
+  })
+
+  it('shows initials from display_name when no avatar_url', () => {
+    render(<UserBubble
+      prompt="hello"
+      createdAt={Date.now()}
+      author={{ display_name: 'Nagi Salloum', avatar_url: '' }}
+    />)
+    expect(screen.getByText('NS')).toBeTruthy()
   })
 })
