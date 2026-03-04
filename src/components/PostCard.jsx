@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { Link }            from 'react-router-dom'
 import { DynamicChart }    from './charts/DynamicChart'
 import { DateRangePickerPopover } from './DateRangePickerPopover'
 import { ReplyCard }       from './ReplyCard'
@@ -177,18 +178,41 @@ export function PostCard({ post, onReply, isActive, onCancel, onDeepAnalysis, ch
       {/* Author bar */}
       {post.author && (
         <div className="flex items-center gap-2 mb-2">
-          {post.author.avatar_url ? (
-            <img
-              src={post.author.avatar_url}
-              alt={post.author.display_name ?? 'User'}
-              className="h-5 w-5 rounded-full object-cover shrink-0"
-            />
+          {post.userId ? (
+            <Link
+              to={`/profile/${post.userId}`}
+              className="flex items-center gap-2 min-w-0 hover:opacity-75 transition-opacity"
+              onClick={e => e.stopPropagation()}
+            >
+              {post.author.avatar_url ? (
+                <img
+                  src={post.author.avatar_url}
+                  alt={post.author.display_name ?? 'User'}
+                  className="h-5 w-5 rounded-full object-cover shrink-0"
+                />
+              ) : (
+                <div className="h-5 w-5 rounded-full bg-slate-200 dark:bg-slate-700 shrink-0" aria-hidden="true" />
+              )}
+              <span className="text-xs font-medium text-slate-500 dark:text-slate-400 truncate">
+                {post.author.display_name}
+              </span>
+            </Link>
           ) : (
-            <div className="h-5 w-5 rounded-full bg-slate-200 dark:bg-slate-700 shrink-0" aria-hidden="true" />
+            <div className="flex items-center gap-2 min-w-0">
+              {post.author.avatar_url ? (
+                <img
+                  src={post.author.avatar_url}
+                  alt={post.author.display_name ?? 'User'}
+                  className="h-5 w-5 rounded-full object-cover shrink-0"
+                />
+              ) : (
+                <div className="h-5 w-5 rounded-full bg-slate-200 dark:bg-slate-700 shrink-0" aria-hidden="true" />
+              )}
+              <span className="text-xs font-medium text-slate-500 dark:text-slate-400 truncate">
+                {post.author.display_name}
+              </span>
+            </div>
           )}
-          <span className="text-xs font-medium text-slate-500 dark:text-slate-400 truncate">
-            {post.author.display_name}
-          </span>
           {onDelete && (
             <button
               onClick={() => onDelete(post.id)}
