@@ -8,18 +8,46 @@ import { stripHint }       from '../utils/stripHint'
 import { initials }        from '../utils/initials'
 
 /** Compact card for Replies tab: post context + user's reply bubbles */
-function ReplyContextCard({ post, userId }) {
+function ReplyContextCard({ post, userId, user, onSignIn }) {
+  const [expanded, setExpanded] = useState(false)
   const userReplies = (post.replies ?? []).filter(r => r.userId === userId)
   if (!userReplies.length) return null
 
   return (
     <div className="rounded-xl border border-slate-200 dark:border-slate-700/60 bg-white dark:bg-slate-800/30 overflow-hidden shadow-sm">
-      {/* Post context header */}
-      <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-700/40 bg-slate-50 dark:bg-slate-800/50">
-        <p className="text-xs font-medium text-slate-500 dark:text-slate-400 line-clamp-2">
+      {/* Clickable title header with chevron */}
+      <button
+        type="button"
+        aria-label={expanded ? 'Collapse post' : 'Expand post'}
+        onClick={() => setExpanded(v => !v)}
+        className="w-full flex items-center justify-between px-4 py-3 border-b border-slate-100 dark:border-slate-700/40 bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-700/40 transition-colors text-left"
+      >
+        <p className="text-xs font-medium text-slate-500 dark:text-slate-400 line-clamp-2 flex-1 mr-2">
           {post.title || stripHint(post.prompt)}
         </p>
-      </div>
+        <svg
+          className={`h-4 w-4 shrink-0 text-slate-400 transition-transform duration-200 ${expanded ? 'rotate-90' : ''}`}
+          viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" d="M9 18l6-6-6-6"/>
+        </svg>
+      </button>
+
+      {/* Expanded: full PostCard (read-only) */}
+      {expanded && (
+        <div className="border-b border-slate-100 dark:border-slate-700/40">
+          <PostCard
+            post={post}
+            onReply={null}
+            isActive={false}
+            onCancel={null}
+            onDeepAnalysis={null}
+            user={user}
+            onSignIn={onSignIn}
+          />
+        </div>
+      )}
+
       {/* User's reply bubbles */}
       <div className="px-4 py-3 space-y-2">
         {userReplies.map(reply => (
@@ -151,7 +179,7 @@ export default function ProfilePage({ ctx }) {
           ) : (
             <div className="space-y-4">
               {replyPosts.map(post => (
-                <ReplyContextCard key={post.id} post={post} userId={userId} />
+                <ReplyContextCard key={post.id} post={post} userId={userId} user={user} onSignIn={signInWithGoogle} />
               ))}
             </div>
           )
