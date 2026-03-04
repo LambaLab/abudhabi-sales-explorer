@@ -7,6 +7,7 @@ import { buildShareUrl }   from '../utils/deeplink'
 import { stripHint }       from '../utils/stripHint'
 import { ThinkingLabel }   from './ThinkingLabel'
 import { SignInModal }     from './SignInModal'
+import { initials }        from '../utils/initials'
 
 function Skeleton({ className }) {
   return <div className={`animate-pulse rounded bg-slate-700/50 ${className}`} />
@@ -111,10 +112,33 @@ function ReplyInput({ postId, onSubmit, disabled }) {
   )
 }
 
+/** Small circular author avatar with initials fallback */
+function AuthorAvatar({ avatarUrl, displayName, imgError, onError }) {
+  if (avatarUrl && !imgError) {
+    return (
+      <img
+        src={avatarUrl}
+        alt={displayName ?? 'User'}
+        className="h-5 w-5 rounded-full object-cover shrink-0"
+        onError={onError}
+      />
+    )
+  }
+  const abbr = initials(displayName ?? '')
+  return (
+    <div className="h-5 w-5 rounded-full bg-accent/10 flex items-center justify-center shrink-0">
+      <span className="text-[9px] font-bold text-accent select-none leading-none">
+        {abbr || '?'}
+      </span>
+    </div>
+  )
+}
+
 export function PostCard({ post, onReply, isActive, onCancel, onDeepAnalysis, chartType = 'bar', onDelete, currentUser, user, onSignIn }) {
   const [copied, setCopied] = useState(false)
   const [dateRange, setDateRange] = useState({ dateFrom: '', dateTo: '' })
   const [showSignIn, setShowSignIn] = useState(false)
+  const [authorImgError, setAuthorImgError] = useState(false)
   const bottomRef   = useRef(null)
   const didMountRef = useRef(false)
 
@@ -184,30 +208,24 @@ export function PostCard({ post, onReply, isActive, onCancel, onDeepAnalysis, ch
               className="flex items-center gap-2 min-w-0 hover:opacity-75 transition-opacity"
               onClick={e => e.stopPropagation()}
             >
-              {post.author.avatar_url ? (
-                <img
-                  src={post.author.avatar_url}
-                  alt={post.author.display_name ?? 'User'}
-                  className="h-5 w-5 rounded-full object-cover shrink-0"
-                />
-              ) : (
-                <div className="h-5 w-5 rounded-full bg-slate-200 dark:bg-slate-700 shrink-0" aria-hidden="true" />
-              )}
+              <AuthorAvatar
+                avatarUrl={post.author.avatar_url}
+                displayName={post.author.display_name}
+                imgError={authorImgError}
+                onError={() => setAuthorImgError(true)}
+              />
               <span className="text-xs font-medium text-slate-500 dark:text-slate-400 truncate">
                 {post.author.display_name}
               </span>
             </Link>
           ) : (
             <div className="flex items-center gap-2 min-w-0">
-              {post.author.avatar_url ? (
-                <img
-                  src={post.author.avatar_url}
-                  alt={post.author.display_name ?? 'User'}
-                  className="h-5 w-5 rounded-full object-cover shrink-0"
-                />
-              ) : (
-                <div className="h-5 w-5 rounded-full bg-slate-200 dark:bg-slate-700 shrink-0" aria-hidden="true" />
-              )}
+              <AuthorAvatar
+                avatarUrl={post.author.avatar_url}
+                displayName={post.author.display_name}
+                imgError={authorImgError}
+                onError={() => setAuthorImgError(true)}
+              />
               <span className="text-xs font-medium text-slate-500 dark:text-slate-400 truncate">
                 {post.author.display_name}
               </span>
