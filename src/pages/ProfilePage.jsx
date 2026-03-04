@@ -96,102 +96,104 @@ export default function ProfilePage({ ctx }) {
   const isOwnProfile = user?.id === userId
 
   return (
-    <main className="relative flex-1 overflow-y-auto">
-      <div className="mx-auto max-w-2xl px-4 pt-6 pb-24">
+    <div className="relative flex-1 flex flex-col min-h-0">
+      <main className="flex-1 overflow-y-auto">
+        <div className="mx-auto max-w-2xl px-4 pt-6 pb-24">
 
-        {error && (
-          <div className="mb-4 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 px-4 py-2 text-sm text-red-700 dark:text-red-300">
-            {error}
-          </div>
-        )}
+          {error && (
+            <div className="mb-4 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 px-4 py-2 text-sm text-red-700 dark:text-red-300">
+              {error}
+            </div>
+          )}
 
-        {/* ── Profile header ── */}
-        <div className="flex flex-col items-center gap-3 mb-6">
-          {/* Avatar */}
-          <div className="h-20 w-20 rounded-full overflow-hidden bg-slate-200 dark:bg-slate-700 flex items-center justify-center ring-2 ring-slate-200 dark:ring-slate-700">
-            {showImg ? (
-              <img
-                src={avatarUrl}
-                alt={displayName}
-                className="h-full w-full object-cover"
-                onError={() => setImgError(true)}
-              />
-            ) : (
-              <span className="text-2xl font-bold text-slate-600 dark:text-slate-300 select-none">
-                {initials(displayName) || '?'}
-              </span>
-            )}
-          </div>
-
-          {/* Name + meta */}
-          <div className="text-center space-y-0.5">
-            <h1 className="text-lg font-bold text-slate-900 dark:text-white">
-              {loading ? '…' : displayName || 'Unknown user'}
-            </h1>
-            {isOwnProfile && user?.email && (
-              <p className="text-sm text-slate-500 dark:text-slate-400">{user.email}</p>
-            )}
-            <p className="text-sm text-slate-400 dark:text-slate-500">
-              {postCount} {postCount === 1 ? 'post' : 'posts'}
-            </p>
-          </div>
-        </div>
-
-        {/* ── Tabs ── */}
-        <div role="tablist" className="flex border-b border-slate-200 dark:border-slate-700 mb-4">
-          {[['posts', 'Posts'], ['replies', 'Replies']].map(([id, label]) => (
-            <button
-              key={id}
-              role="tab"
-              aria-selected={tab === id}
-              onClick={() => setTab(id)}
-              className={`px-5 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${
-                tab === id
-                  ? 'border-accent text-accent'
-                  : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
-              }`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-
-        {/* ── Tab content ── */}
-        {loading ? (
-          <div className="py-16 text-center text-slate-400 text-sm animate-pulse">Loading…</div>
-        ) : tab === 'posts' ? (
-          posts.length === 0 ? (
-            <div className="py-16 text-center text-slate-400 text-sm">No posts yet.</div>
-          ) : (
-            <div className="space-y-4">
-              {posts.map(post => (
-                <PostCard
-                  key={post.id}
-                  post={post}
-                  onReply={null}
-                  isActive={false}
-                  onCancel={null}
-                  onDeepAnalysis={null}
-                  user={user}
-                  onSignIn={signInWithGoogle}
+          {/* ── Profile header ── */}
+          <div className="flex flex-col items-center gap-3 mb-6">
+            {/* Avatar */}
+            <div className="h-20 w-20 rounded-full overflow-hidden bg-slate-200 dark:bg-slate-700 flex items-center justify-center ring-2 ring-slate-200 dark:ring-slate-700">
+              {showImg ? (
+                <img
+                  src={avatarUrl}
+                  alt={displayName}
+                  className="h-full w-full object-cover"
+                  onError={() => setImgError(true)}
                 />
-              ))}
+              ) : (
+                <span className="text-2xl font-bold text-slate-600 dark:text-slate-300 select-none">
+                  {initials(displayName) || '?'}
+                </span>
+              )}
             </div>
-          )
-        ) : (
-          replyPosts.length === 0 ? (
-            <div className="py-16 text-center text-slate-400 text-sm">No replies yet.</div>
-          ) : (
-            <div className="space-y-4">
-              {replyPosts.map(post => (
-                <ReplyContextCard key={post.id} post={post} userId={userId} user={user} onSignIn={signInWithGoogle} />
-              ))}
-            </div>
-          )
-        )}
-      </div>
 
-      {/* ChatInput — own profile only */}
+            {/* Name + meta */}
+            <div className="text-center space-y-0.5">
+              <h1 className="text-lg font-bold text-slate-900 dark:text-white">
+                {loading ? '…' : displayName || 'Unknown user'}
+              </h1>
+              {isOwnProfile && user?.email && (
+                <p className="text-sm text-slate-500 dark:text-slate-400">{user.email}</p>
+              )}
+              <p className="text-sm text-slate-400 dark:text-slate-500">
+                {postCount} {postCount === 1 ? 'post' : 'posts'}
+              </p>
+            </div>
+          </div>
+
+          {/* ── Tabs ── */}
+          <div role="tablist" className="flex border-b border-slate-200 dark:border-slate-700 mb-4">
+            {[['posts', 'Posts'], ['replies', 'Replies']].map(([id, label]) => (
+              <button
+                key={id}
+                role="tab"
+                aria-selected={tab === id}
+                onClick={() => setTab(id)}
+                className={`px-5 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${
+                  tab === id
+                    ? 'border-accent text-accent'
+                    : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
+          {/* ── Tab content ── */}
+          {loading ? (
+            <div className="py-16 text-center text-slate-400 text-sm animate-pulse">Loading…</div>
+          ) : tab === 'posts' ? (
+            posts.length === 0 ? (
+              <div className="py-16 text-center text-slate-400 text-sm">No posts yet.</div>
+            ) : (
+              <div className="space-y-4">
+                {posts.map(post => (
+                  <PostCard
+                    key={post.id}
+                    post={post}
+                    onReply={null}
+                    isActive={false}
+                    onCancel={null}
+                    onDeepAnalysis={null}
+                    user={user}
+                    onSignIn={signInWithGoogle}
+                  />
+                ))}
+              </div>
+            )
+          ) : (
+            replyPosts.length === 0 ? (
+              <div className="py-16 text-center text-slate-400 text-sm">No replies yet.</div>
+            ) : (
+              <div className="space-y-4">
+                {replyPosts.map(post => (
+                  <ReplyContextCard key={post.id} post={post} userId={userId} user={user} onSignIn={signInWithGoogle} />
+                ))}
+              </div>
+            )
+          )}
+        </div>
+      </main>
+
+      {/* ChatInput — own profile only, now outside main */}
       {isOwnProfile && !loading && (
         <div className="absolute bottom-0 left-0 right-0 px-4 py-3 z-10 bg-slate-50/75 dark:bg-[#0f172a]/75 backdrop-blur-md">
           <div className="mx-auto max-w-2xl">
@@ -208,6 +210,6 @@ export default function ProfilePage({ ctx }) {
           </div>
         </div>
       )}
-    </main>
+    </div>
   )
 }

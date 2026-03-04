@@ -172,4 +172,26 @@ describe('ProfilePage', () => {
     })
     expect(screen.queryByTestId('chat-input')).toBeNull()
   })
+
+  it('ChatInput is inside a non-scrolling outer container (not inside main)', () => {
+    useProfileFeed.mockReturnValue({
+      profile: { id: 'u1', display_name: 'Nagi', avatar_url: '' },
+      posts: [], replyPosts: [], loading: false, error: null,
+    })
+    renderProfile('u1', {
+      user: { id: 'u1' },
+      authLoading: false,
+      signInWithGoogle: vi.fn(),
+      analyze: vi.fn(),
+      getDateRangeHint: () => '',
+      activePostId: null,
+      cancel: vi.fn(),
+      ready: true,
+      settings: { chartType: 'bar' },
+      updateSettings: vi.fn(),
+    })
+    const chatInput = screen.getByTestId('chat-input')
+    // ChatInput must NOT be inside a <main> element
+    expect(chatInput.closest('main')).toBeNull()
+  })
 })
