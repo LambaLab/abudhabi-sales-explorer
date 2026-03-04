@@ -1,5 +1,5 @@
 /* global __APP_VERSION__ */
-import { Routes, Route, NavLink } from 'react-router-dom'
+import { Routes, Route, NavLink, useMatch, useNavigate } from 'react-router-dom'
 import { useDuckDB }    from './hooks/useDuckDB'
 import { useAppData }   from './hooks/useAppData'
 import { useAnalysis }  from './hooks/useAnalysis'
@@ -15,6 +15,8 @@ import ProfilePage      from './pages/ProfilePage'
 export default function App() {
   const { theme, toggle: toggleTheme } = useTheme()
   const { settings, updateSettings, getDateRangeHint } = useSettings()
+  const isProfile = useMatch('/profile/:userId')
+  const navigate  = useNavigate()
 
   const { ready, error: dbError } = useDuckDB()
   const { meta }                  = useAppData(ready)
@@ -60,28 +62,41 @@ export default function App() {
             {!ready && !dbError && <span className="text-xs text-slate-400 animate-pulse hidden sm:inline">Loading…</span>}
           </div>
 
-          {/* Feed / Charts nav */}
-          <div className="flex items-center gap-1 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800/50 p-1">
-            {[
-              { to: '/',       label: 'Feed',   end: true },
-              { to: '/charts', label: 'Charts', end: false },
-            ].map(({ to, label, end }) => (
-              <NavLink
-                key={to}
-                to={to}
-                end={end}
-                className={({ isActive }) =>
-                  `px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${
-                    isActive
-                      ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm'
-                      : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
-                  }`
-                }
-              >
-                {label}
-              </NavLink>
-            ))}
-          </div>
+          {/* Center: Back button (profile routes) OR Feed/Charts nav */}
+          {isProfile ? (
+            <button
+              onClick={() => navigate(-1)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors"
+              aria-label="Go back"
+            >
+              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19 12H5M12 5l-7 7 7 7"/>
+              </svg>
+              Back
+            </button>
+          ) : (
+            <div className="flex items-center gap-1 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800/50 p-1">
+              {[
+                { to: '/',       label: 'Feed',   end: true },
+                { to: '/charts', label: 'Charts', end: false },
+              ].map(({ to, label, end }) => (
+                <NavLink
+                  key={to}
+                  to={to}
+                  end={end}
+                  className={({ isActive }) =>
+                    `px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                      isActive
+                        ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm'
+                        : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
+                    }`
+                  }
+                >
+                  {label}
+                </NavLink>
+              ))}
+            </div>
+          )}
 
           {/* Version + Theme + Profile */}
           <div className="shrink-0 flex items-center gap-2">
