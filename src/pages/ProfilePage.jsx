@@ -97,6 +97,19 @@ export default function ProfilePage({ ctx }) {
 
   return (
     <div className="relative flex-1 flex flex-col min-h-0">
+      {/* Back button — top-left, like X/Twitter profile */}
+      <div className="absolute top-3 left-3 z-10">
+        <button
+          type="button"
+          aria-label="Go back"
+          onClick={() => navigate(-1)}
+          className="flex h-9 w-9 items-center justify-center rounded-full bg-white/80 dark:bg-slate-800/80 backdrop-blur border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white shadow-sm transition-colors"
+        >
+          <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M19 12H5M12 5l-7 7 7 7"/>
+          </svg>
+        </button>
+      </div>
       <main className="flex-1 overflow-y-auto">
         <div className="mx-auto max-w-2xl px-4 pt-6 pb-24">
 

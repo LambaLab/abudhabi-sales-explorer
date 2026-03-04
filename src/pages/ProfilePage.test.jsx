@@ -2,6 +2,12 @@ import { render, screen, fireEvent } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 
+const mockNavigate = vi.fn()
+vi.mock('react-router-dom', async () => {
+  const actual = await vi.importActual('react-router-dom')
+  return { ...actual, useNavigate: () => mockNavigate }
+})
+
 // Mock useProfileFeed
 vi.mock('../hooks/useProfileFeed', () => ({
   useProfileFeed: vi.fn(),
@@ -39,7 +45,10 @@ function renderProfile(userId, ctx) {
 }
 
 describe('ProfilePage', () => {
-  beforeEach(() => vi.clearAllMocks())
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockNavigate.mockReset()
+  })
 
   it('shows SignInModal when user is not signed in', () => {
     useProfileFeed.mockReturnValue({ profile: null, posts: [], replyPosts: [], loading: false })
@@ -193,5 +202,24 @@ describe('ProfilePage', () => {
     const chatInput = screen.getByTestId('chat-input')
     // ChatInput must NOT be inside a <main> element
     expect(chatInput.closest('main')).toBeNull()
+  })
+
+  it('shows a back button with aria-label "Go back"', () => {
+    useProfileFeed.mockReturnValue({
+      profile: { id: 'u1', display_name: 'Nagi', avatar_url: '' },
+      posts: [], replyPosts: [], loading: false, error: null,
+    })
+    renderProfile('u1', { user: { id: 'u1' }, authLoading: false, signInWithGoogle: vi.fn() })
+    expect(screen.getByRole('button', { name: /go back/i })).toBeTruthy()
+  })
+
+  it('clicking the back button calls navigate(-1)', () => {
+    useProfileFeed.mockReturnValue({
+      profile: { id: 'u1', display_name: 'Nagi', avatar_url: '' },
+      posts: [], replyPosts: [], loading: false, error: null,
+    })
+    renderProfile('u1', { user: { id: 'u1' }, authLoading: false, signInWithGoogle: vi.fn() })
+    fireEvent.click(screen.getByRole('button', { name: /go back/i }))
+    expect(mockNavigate).toHaveBeenCalledWith(-1)
   })
 })
