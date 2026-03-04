@@ -17,8 +17,22 @@ export function useAuth() {
     })
 
     // Subscribe to auth state changes (sign-in after OAuth redirect, sign-out)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setUser(session?.user ?? null)
+      if (event === 'SIGNED_IN' && session?.user) {
+        const u = session.user
+        supabase
+          .from('profiles')
+          .upsert(
+            {
+              id:           u.id,
+              display_name: u.user_metadata?.full_name  ?? '',
+              avatar_url:   u.user_metadata?.avatar_url ?? '',
+            },
+            { onConflict: 'id' }
+          )
+          .then(null, err => console.error('[useAuth] profile upsert failed:', err))
+      }
     })
 
     return () => subscription.unsubscribe()

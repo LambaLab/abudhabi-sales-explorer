@@ -6,6 +6,8 @@ const mockSignInWithOAuth   = vi.fn()
 const mockSignOut           = vi.fn()
 const mockOnAuthStateChange = vi.fn()
 const mockUnsubscribe       = vi.fn()
+const mockUpsert            = vi.fn()
+const mockFrom              = vi.fn()
 
 vi.mock('../lib/supabase', () => ({
   supabase: {
@@ -15,6 +17,7 @@ vi.mock('../lib/supabase', () => ({
       signOut:            () => mockSignOut(),
       onAuthStateChange:  (cb) => mockOnAuthStateChange(cb),
     },
+    from: (table) => mockFrom(table),
   },
 }))
 
@@ -25,6 +28,8 @@ describe('useAuth', () => {
     vi.clearAllMocks()
     mockGetSession.mockResolvedValue({ data: { session: null } })
     mockOnAuthStateChange.mockReturnValue({ data: { subscription: { unsubscribe: mockUnsubscribe } } })
+    mockFrom.mockReturnValue({ upsert: mockUpsert })
+    mockUpsert.mockResolvedValue({ error: null })
   })
 
   it('user is null initially (no session)', async () => {
@@ -86,5 +91,29 @@ describe('useAuth', () => {
     await act(async () => {})
     unmount()
     expect(mockUnsubscribe).toHaveBeenCalled()
+  })
+
+  it('upserts profile with avatar_url and display_name on SIGNED_IN', async () => {
+    let capturedCb
+    mockOnAuthStateChange.mockImplementation(cb => {
+      capturedCb = cb
+      return { data: { subscription: { unsubscribe: mockUnsubscribe } } }
+    })
+    renderHook(() => useAuth())
+    await act(async () => {})
+
+    const fakeUser = {
+      id: 'u1',
+      user_metadata: { full_name: 'Nagi Salloum', avatar_url: 'https://google/photo.jpg' },
+    }
+    await act(async () => {
+      capturedCb('SIGNED_IN', { user: fakeUser })
+    })
+
+    expect(mockFrom).toHaveBeenCalledWith('profiles')
+    expect(mockUpsert).toHaveBeenCalledWith(
+      { id: 'u1', display_name: 'Nagi Salloum', avatar_url: 'https://google/photo.jpg' },
+      { onConflict: 'id' }
+    )
   })
 })
