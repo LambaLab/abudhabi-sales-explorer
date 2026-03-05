@@ -48,7 +48,7 @@ describe('UserBubble', () => {
     expect(screen.getByText('NS')).toBeTruthy()
   })
 
-  it('timestamp is not a sibling of the avatar in the same flex row', () => {
+  it('avatar is in the outer row, bubble and name are together in the right column', () => {
     const { container } = render(
       <UserBubble
         prompt="hello"
@@ -57,18 +57,12 @@ describe('UserBubble', () => {
       />
     )
     const avatarCircle = container.querySelector('.rounded-full')
+    const bubble       = container.querySelector('.rounded-xl')
     const timestamp    = container.querySelector('p')
-    // The avatar and timestamp must NOT share the same parent element.
-    // In the fixed layout the avatar lives in an inner row (same parent as the bubble),
-    // while the timestamp is a direct child of the outer column — different parents.
-    // In the buggy layout the timestamp is a sibling of the bubble inside the bubble-column,
-    // and the avatar is a sibling of the bubble-column in the outer row, so they have
-    // different parents too — but the bubble and the avatar share the outer row as parent.
-    // The definitive assertion: avatar's parent must also be the bubble's parent
-    // (they share the inner row), whereas the timestamp's parent must NOT be that same element.
-    const bubble = container.querySelector('.rounded-xl')
-    expect(avatarCircle.parentElement).toBe(bubble.parentElement)
-    expect(timestamp.parentElement).not.toBe(bubble.parentElement)
+    // Facebook-style: avatar (left col) and bubble (right col) have DIFFERENT parents
+    expect(avatarCircle.parentElement).not.toBe(bubble.parentElement)
+    // Timestamp <p> is in the RIGHT column — same parent as the bubble
+    expect(timestamp.parentElement).toBe(bubble.parentElement)
   })
 
   it('shows author name as a link to their profile when userId and display_name are provided', () => {
