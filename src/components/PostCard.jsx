@@ -164,6 +164,7 @@ export function PostCard({ post, onReply, isActive, onCancel, onDeepAnalysis, ch
     if (currentCount <= prevCount) return  // deletion or no change
 
     const newReplies = (post.replies ?? []).slice(prevCount)
+    // !r.userId covers optimistic inserts that haven't yet received a userId from the DB
     const hasOwnReply = newReplies.some(r => !r.userId || r.userId === user?.id)
 
     if (hasOwnReply) {
@@ -178,11 +179,11 @@ export function PostCard({ post, onReply, isActive, onCancel, onDeepAnalysis, ch
     }
   }, [post.replies, user?.id])
 
-  // Also scroll when streaming finishes (done status)
+  // Also scroll when streaming finishes (done status), only if user is at bottom
   const lastReply = post.replies?.at(-1)
   useEffect(() => {
     if (!didMountRef.current) { didMountRef.current = true; return }
-    if (lastReply?.status === 'done') {
+    if (lastReply?.status === 'done' && isAtBottomRef.current) {
       bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
     }
   }, [lastReply?.status])
@@ -408,7 +409,7 @@ export function PostCard({ post, onReply, isActive, onCancel, onDeepAnalysis, ch
           <div
             ref={scrollRef}
             onScroll={handleReplyScroll}
-            className="max-h-[420px] overflow-y-auto scroll-smooth space-y-3 pr-1"
+            className={`max-h-[420px] overflow-y-auto scroll-smooth space-y-3 pr-1${unseenCount > 0 ? ' pb-8' : ''}`}
           >
             {post.replies.map(reply => (
               <ReplyCard key={reply.id} reply={reply} onReply={onReply} postId={post.id} />
