@@ -79,6 +79,7 @@ export default function ProfilePage({ ctx }) {
   const [localAvatarUrl, setLocalAvatarUrl] = useState(null)
   const [uploading, setUploading]           = useState(false)
   const fileInputRef = useRef(null)
+  const [uploadError, setUploadError] = useState(null)
 
   // Auth guard
   if (!authLoading && !user) {
@@ -100,16 +101,25 @@ export default function ProfilePage({ ctx }) {
   const isOwnProfile = user?.id === userId
 
   async function handleAvatarUpload(e) {
+    setUploadError(null)
     const file = e.target.files?.[0]
-    if (!file || file.size > 5 * 1024 * 1024) return   // reject > 5 MB
+    if (!file) return
+    if (file.size > 5 * 1024 * 1024) { setUploadError('Image must be under 5 MB.'); return }
     setUploading(true)
     const ext  = file.name.split('.').pop() || 'jpg'
     const path = `${user.id}/${Date.now()}.${ext}`
     const { error: uploadErr } = await supabase.storage
       .from('avatars').upload(path, file, { upsert: true })
-    if (uploadErr) { console.error('[ProfilePage] avatar upload:', uploadErr); setUploading(false); return }
+    if (uploadErr) { console.error('[ProfilePage] avatar upload:', uploadErr); setUploadError('Upload failed. Please try again.'); setUploading(false); return }
     const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(path)
-    await supabase.from('profiles').update({ avatar_url: publicUrl }).eq('id', user.id)
+    const { error: profileErr } = await supabase
+      .from('profiles').update({ avatar_url: publicUrl }).eq('id', user.id)
+    if (profileErr) {
+      console.error('[ProfilePage] profile update:', profileErr)
+      setUploadError('Could not save profile. Please try again.')
+      setUploading(false)
+      return
+    }
     setLocalAvatarUrl(publicUrl)
     setImgError(false)
     setUploading(false)
@@ -146,8 +156,9 @@ export default function ProfilePage({ ctx }) {
               <div className="h-20 w-20 rounded-full overflow-hidden bg-slate-200 dark:bg-slate-700 flex items-center justify-center ring-2 ring-slate-200 dark:ring-slate-700">
                 {uploading ? (
                   <div className="flex items-center justify-center h-full w-full bg-black/30">
-                    <svg className="h-5 w-5 animate-spin text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v3m0 12v3M3 12h3m12 0h3"/>
+                    <svg className="h-5 w-5 animate-spin text-white" viewBox="0 0 24 24" fill="none">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3"/>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
                     </svg>
                   </div>
                 ) : showImg ? (
@@ -187,6 +198,9 @@ export default function ProfilePage({ ctx }) {
                 </>
               )}
             </div>
+              {uploadError && (
+                <p className="text-xs text-red-500 mt-1 text-center">{uploadError}</p>
+              )}
 
             {/* Name + meta */}
             <div className="text-center space-y-0.5">
