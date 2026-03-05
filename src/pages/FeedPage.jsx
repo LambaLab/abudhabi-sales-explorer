@@ -16,21 +16,31 @@ export default function FeedPage({ ctx }) {
   const mainRef    = useRef(null)
   const prevCount  = useRef(posts.length)
   const [showScrollDown, setShowScrollDown] = useState(false)
+  const [newPostCount, setNewPostCount] = useState(0)
 
   // Auto-scroll to bottom when new post added
   useEffect(() => {
     if (posts.length > prevCount.current) {
-      feedEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+      const newestPost = posts[posts.length - 1]
+      if (newestPost?.userId === user?.id) {
+        // Own post — auto-scroll as before
+        feedEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+      } else {
+        // Remote post — show badge instead
+        setNewPostCount(n => n + (posts.length - prevCount.current))
+      }
     }
     prevCount.current = posts.length
-  }, [posts.length])
+  }, [posts.length, user?.id])
 
   // Scroll-to-bottom button visibility
   useEffect(() => {
     const el = mainRef.current
     if (!el) return
     function onScroll() {
-      setShowScrollDown(el.scrollHeight - el.scrollTop - el.clientHeight > 200)
+      const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 200
+      setShowScrollDown(!nearBottom)
+      if (nearBottom) setNewPostCount(0)
     }
     el.addEventListener('scroll', onScroll, { passive: true })
     return () => el.removeEventListener('scroll', onScroll)
@@ -76,6 +86,26 @@ export default function FeedPage({ ctx }) {
               <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7"/>
             </svg>
             Jump to latest
+          </button>
+        </div>
+      )}
+
+      {/* New posts badge — remote posts arrive while scrolled up */}
+      {newPostCount > 0 && (
+        <div className="absolute bottom-20 inset-x-0 flex justify-center z-20 pointer-events-none">
+          <button
+            type="button"
+            aria-label={`${newPostCount} new post${newPostCount > 1 ? 's' : ''}`}
+            onClick={() => {
+              feedEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+              setNewPostCount(0)
+            }}
+            className="pointer-events-auto flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-accent text-white text-xs font-medium shadow-lg hover:opacity-90 transition-opacity"
+          >
+            <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 15l7-7 7 7"/>
+            </svg>
+            {newPostCount} new post{newPostCount > 1 ? 's' : ''}
           </button>
         </div>
       )}
