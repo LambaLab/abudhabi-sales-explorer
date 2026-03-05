@@ -49,7 +49,7 @@ export function UserBubble({ prompt, createdAt, author, userId }) {
           )}
           {relativeTime(createdAt)}
         </p>
-        <div className="rounded-xl bg-accent text-white px-3.5 py-2.5 text-sm leading-relaxed max-w-[80%]">
+        <div className="rounded-xl bg-accent text-white px-3.5 py-2.5 text-sm leading-relaxed max-w-full">
           {stripHint(prompt)}
         </div>
       </div>
