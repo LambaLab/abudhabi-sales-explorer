@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
+import { MemoryRouter } from 'react-router-dom'
 import { UserBubble } from './UserBubble'
 
 describe('UserBubble', () => {
@@ -68,5 +69,32 @@ describe('UserBubble', () => {
     const bubble = container.querySelector('.rounded-xl')
     expect(avatarCircle.parentElement).toBe(bubble.parentElement)
     expect(timestamp.parentElement).not.toBe(bubble.parentElement)
+  })
+
+  it('shows author name as a link to their profile when userId and display_name are provided', () => {
+    render(
+      <MemoryRouter>
+        <UserBubble
+          prompt="test"
+          createdAt={Date.now()}
+          author={{ display_name: 'Nagi Salloum', avatar_url: '' }}
+          userId="user-123"
+        />
+      </MemoryRouter>
+    )
+    const link = screen.getByRole('link', { name: /nagi salloum/i })
+    expect(link).toBeTruthy()
+    expect(link).toHaveAttribute('href', '/profile/user-123')
+  })
+
+  it('does not show a name link when userId is not provided', () => {
+    render(
+      <UserBubble
+        prompt="test"
+        createdAt={Date.now()}
+        author={{ display_name: 'Nagi Salloum', avatar_url: '' }}
+      />
+    )
+    expect(screen.queryByRole('link')).toBeNull()
   })
 })

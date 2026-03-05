@@ -1,9 +1,10 @@
 import { useState } from 'react'
+import { Link }          from 'react-router-dom'
 import { relativeTime } from '../utils/relativeTime'
 import { stripHint }    from '../utils/stripHint'
 import { initials }     from '../utils/initials'
 
-export function UserBubble({ prompt, createdAt, author }) {
+export function UserBubble({ prompt, createdAt, author, userId }) {
   const [imgError, setImgError] = useState(false)
 
   const avatarUrl   = author?.avatar_url ?? ''
@@ -35,7 +36,20 @@ export function UserBubble({ prompt, createdAt, author }) {
           )}
         </div>
       </div>
-      <p className="text-xs text-slate-400">{relativeTime(createdAt)}</p>
+      <p className="flex justify-end items-center gap-1 text-xs text-slate-400">
+        {userId && displayName && (
+          <>
+            <Link
+              to={`/profile/${userId}`}
+              className="font-medium text-accent hover:underline"
+            >
+              {displayName}
+            </Link>
+            <span aria-hidden="true">·</span>
+          </>
+        )}
+        {relativeTime(createdAt)}
+      </p>
     </div>
   )
 }
