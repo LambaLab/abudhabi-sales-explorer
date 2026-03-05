@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useProfileFeed }  from '../hooks/useProfileFeed'
 import { SignInModal }     from '../components/SignInModal'
@@ -7,6 +7,7 @@ import { ChatInput }       from '../components/ChatInput'
 import { UserBubble }      from '../components/UserBubble'
 import { stripHint }       from '../utils/stripHint'
 import { initials }        from '../utils/initials'
+import { supabase }        from '../lib/supabase'
 
 /** Compact card for Replies tab: post context + user's reply bubbles */
 function ReplyContextCard({ post, userId, user, onSignIn }) {
@@ -75,6 +76,9 @@ export default function ProfilePage({ ctx }) {
   const { profile, posts, replyPosts, loading, error } = useProfileFeed(userId)
   const [tab, setTab]   = useState('posts')
   const [imgError, setImgError] = useState(false)
+  const [localAvatarUrl, setLocalAvatarUrl] = useState(null)
+  const [uploading, setUploading]           = useState(false)
+  const fileInputRef = useRef(null)
 
   // Auth guard
   if (!authLoading && !user) {
@@ -89,11 +93,27 @@ export default function ProfilePage({ ctx }) {
     )
   }
 
-  const avatarUrl    = profile?.avatar_url ?? ''
+  const avatarUrl    = localAvatarUrl ?? profile?.avatar_url ?? ''
   const displayName  = profile?.display_name ?? ''
   const showImg      = avatarUrl && !imgError
   const postCount    = posts.length
   const isOwnProfile = user?.id === userId
+
+  async function handleAvatarUpload(e) {
+    const file = e.target.files?.[0]
+    if (!file || file.size > 5 * 1024 * 1024) return   // reject > 5 MB
+    setUploading(true)
+    const ext  = file.name.split('.').pop() || 'jpg'
+    const path = `${user.id}/${Date.now()}.${ext}`
+    const { error: uploadErr } = await supabase.storage
+      .from('avatars').upload(path, file, { upsert: true })
+    if (uploadErr) { console.error('[ProfilePage] avatar upload:', uploadErr); setUploading(false); return }
+    const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(path)
+    await supabase.from('profiles').update({ avatar_url: publicUrl }).eq('id', user.id)
+    setLocalAvatarUrl(publicUrl)
+    setImgError(false)
+    setUploading(false)
+  }
 
   return (
     <div className="relative flex-1 flex flex-col min-h-0">
@@ -121,19 +141,50 @@ export default function ProfilePage({ ctx }) {
 
           {/* ── Profile header ── */}
           <div className="flex flex-col items-center gap-3 mb-6">
-            {/* Avatar */}
-            <div className="h-20 w-20 rounded-full overflow-hidden bg-slate-200 dark:bg-slate-700 flex items-center justify-center ring-2 ring-slate-200 dark:ring-slate-700">
-              {showImg ? (
-                <img
-                  src={avatarUrl}
-                  alt={displayName}
-                  className="h-full w-full object-cover"
-                  onError={() => setImgError(true)}
-                />
-              ) : (
-                <span className="text-2xl font-bold text-slate-600 dark:text-slate-300 select-none">
-                  {initials(displayName) || '?'}
-                </span>
+            {/* Avatar + upload button */}
+            <div className="relative">
+              <div className="h-20 w-20 rounded-full overflow-hidden bg-slate-200 dark:bg-slate-700 flex items-center justify-center ring-2 ring-slate-200 dark:ring-slate-700">
+                {uploading ? (
+                  <div className="flex items-center justify-center h-full w-full bg-black/30">
+                    <svg className="h-5 w-5 animate-spin text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v3m0 12v3M3 12h3m12 0h3"/>
+                    </svg>
+                  </div>
+                ) : showImg ? (
+                  <img
+                    src={avatarUrl}
+                    alt={displayName}
+                    className="h-full w-full object-cover"
+                    onError={() => setImgError(true)}
+                  />
+                ) : (
+                  <span className="text-2xl font-bold text-slate-600 dark:text-slate-300 select-none">
+                    {initials(displayName) || '?'}
+                  </span>
+                )}
+              </div>
+              {isOwnProfile && (
+                <>
+                  <button
+                    type="button"
+                    aria-label="Change profile picture"
+                    disabled={uploading}
+                    onClick={() => fileInputRef.current?.click()}
+                    className="absolute bottom-0 right-0 h-6 w-6 rounded-full bg-slate-700 border-2 border-white dark:border-slate-900 flex items-center justify-center hover:bg-slate-600 transition-colors disabled:opacity-50"
+                  >
+                    <svg className="h-3 w-3 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/>
+                    </svg>
+                  </button>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="sr-only"
+                    onChange={handleAvatarUpload}
+                  />
+                </>
               )}
             </div>
 
