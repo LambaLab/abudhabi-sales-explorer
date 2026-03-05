@@ -139,15 +139,46 @@ export function PostCard({ post, onReply, isActive, onCancel, onDeepAnalysis, ch
   const [dateRange, setDateRange] = useState({ dateFrom: '', dateTo: '' })
   const [showSignIn, setShowSignIn] = useState(false)
   const [authorImgError, setAuthorImgError] = useState(false)
-  const bottomRef   = useRef(null)
-  const didMountRef = useRef(false)
+  const [unseenCount, setUnseenCount] = useState(0)
+  const bottomRef         = useRef(null)
+  const scrollRef         = useRef(null)
+  const didMountRef       = useRef(false)
+  const isAtBottomRef     = useRef(true)
+  const prevReplyCountRef = useRef(-1)   // -1 = "not yet initialised"
 
   function requireAuth(fn) {
     if (user) return fn()
     setShowSignIn(true)
   }
 
-  // Auto-scroll to latest reply when it finishes streaming (skip on initial mount)
+  // Unified reply-change handler: scroll on own reply, pill for others, skip initial mount
+  useEffect(() => {
+    const currentCount = post.replies?.length ?? 0
+    if (prevReplyCountRef.current === -1) {
+      // First run — initialise without scrolling
+      prevReplyCountRef.current = currentCount
+      return
+    }
+    const prevCount = prevReplyCountRef.current
+    prevReplyCountRef.current = currentCount
+    if (currentCount <= prevCount) return  // deletion or no change
+
+    const newReplies = (post.replies ?? []).slice(prevCount)
+    const hasOwnReply = newReplies.some(r => !r.userId || r.userId === user?.id)
+
+    if (hasOwnReply) {
+      // Own reply just added — scroll after React paints so the node exists
+      setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 50)
+    } else if (isAtBottomRef.current) {
+      // Other user's reply, user is already at bottom — just scroll
+      bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+    } else {
+      // Other user's reply, user is scrolled up — show pill
+      setUnseenCount(c => c + newReplies.length)
+    }
+  }, [post.replies, user?.id])
+
+  // Also scroll when streaming finishes (done status)
   const lastReply = post.replies?.at(-1)
   useEffect(() => {
     if (!didMountRef.current) { didMountRef.current = true; return }
@@ -187,6 +218,13 @@ export function PostCard({ post, onReply, isActive, onCancel, onDeepAnalysis, ch
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     } catch { /* buildShareUrl may throw if post has no id */ }
+  }
+
+  function handleReplyScroll() {
+    const el = scrollRef.current
+    if (!el) return
+    isAtBottomRef.current = el.scrollTop + el.clientHeight >= el.scrollHeight - 8
+    if (isAtBottomRef.current) setUnseenCount(0)
   }
 
   const timeAgo = (() => {
@@ -366,13 +404,30 @@ export function PostCard({ post, onReply, isActive, onCancel, onDeepAnalysis, ch
 
       {/* ── Thread: replies ── */}
       {post.replies?.length > 0 && (
-        <div className="border-t border-slate-200 dark:border-slate-700/40 pt-2">
-          <div className="max-h-[420px] overflow-y-auto scroll-smooth space-y-3 pr-1">
+        <div className="relative border-t border-slate-200 dark:border-slate-700/40 pt-2">
+          <div
+            ref={scrollRef}
+            onScroll={handleReplyScroll}
+            className="max-h-[420px] overflow-y-auto scroll-smooth space-y-3 pr-1"
+          >
             {post.replies.map(reply => (
               <ReplyCard key={reply.id} reply={reply} onReply={onReply} postId={post.id} />
             ))}
             <div ref={bottomRef} />
           </div>
+          {unseenCount > 0 && (
+            <div className="absolute bottom-2 left-0 right-0 flex justify-center pointer-events-none">
+              <button
+                onClick={() => {
+                  bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+                  setUnseenCount(0)
+                }}
+                className="pointer-events-auto bg-accent text-white text-xs font-medium rounded-full px-3 py-1.5 shadow-md flex items-center gap-1.5 hover:opacity-90 transition-opacity"
+              >
+                ↓ {unseenCount} new {unseenCount === 1 ? 'reply' : 'replies'}
+              </button>
+            </div>
+          )}
         </div>
       )}
 
