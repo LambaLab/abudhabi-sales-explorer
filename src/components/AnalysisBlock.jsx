@@ -156,16 +156,33 @@ function FactualBlock({ data }) {
  * - If text is valid JSON (full-mode structured response), renders rich UI.
  * - If text is plain string (short-mode or legacy), renders as plain <p>.
  * - adaptiveFormat drives which rich layout to use.
+ *
+ * JSON extraction is deliberately robust:
+ * 1. Strips optional markdown fences (```json … ```) Claude sometimes adds
+ * 2. Extracts the first { … } substring to handle any preamble/postamble text
+ * This mirrors what /api/explain's clarify mode already does client-side.
  */
 export function AnalysisBlock({ text, adaptiveFormat }) {
   if (!text) return null
 
   let parsed = null
-  try {
-    parsed = JSON.parse(text)
-    if (typeof parsed !== 'object' || Array.isArray(parsed)) parsed = null
-  } catch {
-    // not JSON — fall through to plain text
+
+  // Strip markdown code fences if present, then find the first JSON object
+  const stripped = text
+    .replace(/^```(?:json)?\s*/i, '')
+    .replace(/\s*```\s*$/, '')
+    .trim()
+
+  const jsonStart = stripped.indexOf('{')
+  const jsonEnd   = stripped.lastIndexOf('}')
+
+  if (jsonStart !== -1 && jsonEnd > jsonStart) {
+    try {
+      const obj = JSON.parse(stripped.slice(jsonStart, jsonEnd + 1))
+      if (typeof obj === 'object' && !Array.isArray(obj)) parsed = obj
+    } catch {
+      // not valid JSON in the extracted slice — fall through to plain text
+    }
   }
 
   if (!parsed) {

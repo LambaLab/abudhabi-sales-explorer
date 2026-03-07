@@ -53,7 +53,7 @@ export default function FeedPage({ ctx }) {
   return (
     <div className="relative flex-1 flex flex-col min-h-0">
       <main ref={mainRef} className="flex-1 overflow-y-auto">
-        <div className="mx-auto max-w-2xl px-4 pt-4 pb-24 space-y-4">
+        <div className="mx-auto max-w-2xl px-4 pt-4 pb-32 space-y-4">
           <PostFeed
             posts={posts}
             onReply={(postId, prompt) => analyzeReply(postId, prompt + getDateRangeHint())}
@@ -76,7 +76,7 @@ export default function FeedPage({ ctx }) {
 
       {/* Scroll-to-latest button */}
       {showScrollDown && (
-        <div className="absolute bottom-20 inset-x-0 flex justify-center z-20 pointer-events-none">
+        <div className="absolute bottom-24 inset-x-0 flex justify-center z-20 pointer-events-none">
           <button
             type="button"
             onClick={() => feedEndRef.current?.scrollIntoView({ behavior: 'smooth' })}
@@ -92,7 +92,7 @@ export default function FeedPage({ ctx }) {
 
       {/* New posts badge — remote posts arrive while scrolled up */}
       {newPostCount > 0 && (
-        <div className="absolute bottom-20 inset-x-0 flex justify-center z-20 pointer-events-none">
+        <div className="absolute bottom-24 inset-x-0 flex justify-center z-20 pointer-events-none">
           <button
             type="button"
             aria-label={`${newPostCount} new post${newPostCount > 1 ? 's' : ''}`}
@@ -112,7 +112,7 @@ export default function FeedPage({ ctx }) {
 
       {/* Only signed-in users can submit queries */}
       {user && (
-        <div className="absolute bottom-0 left-0 right-0 px-4 py-3 z-10 bg-slate-50/75 dark:bg-[#0f172a]/75 backdrop-blur-md">
+        <div className="absolute bottom-0 left-0 right-0 px-4 pt-3 pb-[max(12px,env(safe-area-inset-bottom))] z-10 bg-slate-50/75 dark:bg-[#0f172a]/75 backdrop-blur-md">
           <div className="mx-auto max-w-2xl">
             <ChatInput
               onSubmit={analyzeWithSettings}

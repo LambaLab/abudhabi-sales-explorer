@@ -39,6 +39,8 @@ async function streamExplain(prompt, intent, summaryStats, signal, mode = 'full'
       if (done) break
       full += decoder.decode(value, { stream: true })
     }
+    // Flush any bytes the decoder held back for multi-byte boundary completion
+    full += decoder.decode()
   } finally {
     reader.releaseLock()
   }

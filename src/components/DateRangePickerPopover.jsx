@@ -87,17 +87,18 @@ export function DateRangePickerPopover({ value, onChange, align = 'left', trigge
     if (!btnRef.current) return null
     const r     = btnRef.current.getBoundingClientRect()
     const POPUP_H = 420
-    const POPUP_W = 440
     const vpW = window.innerWidth
     const vpH = window.innerHeight
+    // On narrow screens cap width so popup never overflows viewport
+    const POPUP_W = Math.min(440, vpW - 16)
     // Go down if forced or not enough space above
     const goDown = alignValue === 'down' || r.top < POPUP_H + 16
     // Horizontal: right-align means right edge of popup = right edge of trigger
     const rawLeft = alignValue === 'right' ? r.right - POPUP_W : r.left
     const left = Math.max(8, Math.min(rawLeft, vpW - POPUP_W - 8))
     return goDown
-      ? { top: r.bottom + 8, left }
-      : { bottom: vpH - r.top + 8, left }
+      ? { top: r.bottom + 8, left, width: POPUP_W }
+      : { bottom: vpH - r.top + 8, left, width: POPUP_W }
   }
 
   // Sync internal state when value prop changes from outside
@@ -218,12 +219,13 @@ export function DateRangePickerPopover({ value, onChange, align = 'left', trigge
         top:    pos?.top,
         bottom: pos?.bottom,
         left:   pos?.left,
+        width:  pos?.width ?? 440,
         zIndex: 9999,
       }}
-      className="flex flex-row w-[440px] rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-xl overflow-hidden"
+      className="flex flex-row rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-xl overflow-hidden"
     >
       {/* Left — Presets */}
-      <div className="w-36 shrink-0 border-r border-slate-100 dark:border-slate-700 p-3 flex flex-col">
+      <div className="w-28 sm:w-36 shrink-0 border-r border-slate-100 dark:border-slate-700 p-3 flex flex-col">
         <p className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide px-2 mb-2">
           Quick select
         </p>
@@ -270,10 +272,10 @@ export function DateRangePickerPopover({ value, onChange, align = 'left', trigge
             caption_label:   'text-sm font-semibold text-slate-800 dark:text-slate-200',
             month_grid:      'w-full border-collapse',
             weekdays:        'flex mb-1',
-            weekday:         'w-9 text-center text-xs font-medium text-slate-400 dark:text-slate-500',
+            weekday:         'w-8 sm:w-9 text-center text-xs font-medium text-slate-400 dark:text-slate-500',
             week:            'flex mt-1',
-            day:             'relative h-9 w-9 text-center p-0',
-            day_button:      'h-9 w-9 rounded-full flex items-center justify-center text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors',
+            day:             'relative h-8 w-8 sm:h-9 sm:w-9 text-center p-0',
+            day_button:      'h-8 w-8 sm:h-9 sm:w-9 rounded-full flex items-center justify-center text-xs sm:text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors',
             selected:        'rounded-full',
             today:           'font-bold text-accent',
             outside:         'opacity-0 pointer-events-none',

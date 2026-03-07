@@ -100,7 +100,7 @@ export function PlusMenu({ settings, onSettingsChange }) {
       </button>
 
       {open && (
-        <div className="absolute bottom-full left-0 mb-2 w-72 z-30 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-lg">
+        <div className="absolute bottom-full left-0 mb-2 w-72 max-w-[calc(100vw-32px)] z-30 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-lg">
 
           {/* ── Main view ── */}
           {view === 'main' && (
