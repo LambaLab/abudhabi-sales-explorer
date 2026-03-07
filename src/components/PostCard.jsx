@@ -8,6 +8,7 @@ import { stripHint }       from '../utils/stripHint'
 import { ThinkingLabel }   from './ThinkingLabel'
 import { SignInModal }     from './SignInModal'
 import { initials }        from '../utils/initials'
+import { SuggestionGroup } from './SuggestionGroup'
 
 function Skeleton({ className }) {
   return <div className={`animate-pulse rounded bg-slate-700/50 ${className}`} />
@@ -428,29 +429,13 @@ export function PostCard({ post, onReply, isActive, onCancel, onDeepAnalysis, ch
 
       {/* ── No-data suggestion rows ── */}
       {onReply && isDone && post.noData && post.suggestions?.length > 0 && !post.replies?.length && (
-        <div className="flex flex-col gap-1.5 pt-1">
-          {post.suggestions.map((s, i) => (
-            <button
-              key={i}
-              type="button"
-              onClick={() => requireAuth(() => onReply(post.id, s.query))}
-              disabled={hasActiveReply}
-              className="flex items-center gap-2.5 w-full text-left rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/60 px-3 py-2.5 text-sm text-slate-700 dark:text-slate-300 hover:border-accent hover:text-accent transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              <svg className="h-4 w-4 shrink-0 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-              </svg>
-              {s.label}
-            </button>
-          ))}
-          {/* "Something else…" — last item, expands to reply input inline */}
-          <ReplyInput
-            postId={post.id}
-            onSubmit={onReply}
-            disabled={hasActiveReply}
-            label="Something else…"
-          />
-        </div>
+        <SuggestionGroup
+          suggestions={post.suggestions}
+          postId={post.id}
+          onReply={(id, q) => requireAuth(() => onReply(id, q))}
+          disabled={hasActiveReply}
+          showTypeAnything
+        />
       )}
 
       {/* ── Clarification chips (shown when clarifyOptions exist and no replies yet) ── */}

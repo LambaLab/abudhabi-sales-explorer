@@ -1,5 +1,6 @@
 import { DynamicChart } from './charts/DynamicChart'
 import { relativeTime } from '../utils/relativeTime'
+import { SuggestionGroup } from './SuggestionGroup'
 
 const STATUS_LABELS = {
   analyzing:  'Analyzing…',
@@ -82,20 +83,12 @@ export function AIBubble({ reply, onReply, postId }) {
 
       {/* Suggestion rows — shown when reply has no data */}
       {reply.suggestions?.length > 0 && (
-        <div className="flex flex-col gap-1.5 ml-8 mt-1">
-          {reply.suggestions.map((s, i) => (
-            <button
-              key={`${i}-${s.label}`}
-              type="button"
-              onClick={() => onReply(postId, s.query)}
-              className="w-full flex items-center gap-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/60 px-3 py-2.5 text-sm text-slate-700 dark:text-slate-300 hover:border-accent hover:text-accent transition-colors text-left"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 shrink-0 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-              {s.label}
-            </button>
-          ))}
+        <div className="ml-8 mt-1">
+          <SuggestionGroup
+            suggestions={reply.suggestions}
+            postId={postId}
+            onReply={onReply}
+          />
         </div>
       )}
     </div>
