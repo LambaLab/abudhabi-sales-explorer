@@ -6,17 +6,37 @@ const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
 const SYSTEM_PROMPT = `You are a real estate data query interpreter for Abu Dhabi property transactions.
 Given a user's question and lists of available values, return ONLY a valid JSON object with the structured query intent.
-Rules:
+
+Query interpretation rules:
 - Match project names, districts, and layouts EXACTLY from the provided lists (fuzzy match: "Noya" → "Noya - Phase 1")
 - For relative dates ("last year", "since 2022", "last 3 years") resolve to absolute YYYY-MM strings
-- "last year" means the 12 months before today
-- "since 2022" means dateFrom = "2022-01"
+- "last year" means the 12 months before today; "since 2022" means dateFrom = "2022-01"
 - chartType must be "line" for trends, "bar" for counts/distributions, "multiline" for comparisons
 - queryType options: price_trend, rate_trend, volume_trend, project_comparison, district_comparison, layout_distribution
 - If comparing specific named projects → project_comparison
 - If comparing districts → district_comparison
 - If comparing bedroom types/layouts → layout_distribution
-- title must be under 60 characters`
+- title must be under 60 characters
+
+adaptiveFormat rules (pick exactly one):
+- "trend"      → queryType is price_trend, rate_trend, or volume_trend
+- "comparison" → queryType is project_comparison, district_comparison, or layout_distribution
+- "investment" → open-ended investment/ROI/market opinion question with no specific data request
+- "factual"    → simple question expecting a single numeric answer (e.g. "how many transactions in 2024?")
+
+chartNeeded rules:
+- true  → all queries where specific data was identified (default for all known queryTypes)
+- false → adaptiveFormat is "investment" or "factual" AND no specific project/district/date was identified
+
+suggestedCharts rules (return 2–3 chip IDs from: line, bar, multiline, volume, price_trend, rate_trend):
+- price_trend:           ["line", "bar", "volume"]
+- rate_trend:            ["line", "bar"]
+- volume_trend:          ["bar", "line"]
+- project_comparison:    ["multiline", "bar"]
+- district_comparison:   ["multiline", "bar"]
+- layout_distribution:   ["multiline", "bar"]
+- investment:            ["price_trend", "rate_trend", "volume"]
+- factual:               []`
 
 export default async function handler(req) {
   if (req.method !== 'POST') {
@@ -63,7 +83,10 @@ Return ONLY this JSON structure (no markdown, no explanation):
     "dateTo": "<YYYY-MM or null>"
   },
   "chartType": "<line|bar|multiline>",
-  "title": "<max 60 chars>"
+  "title": "<max 60 chars>",
+  "adaptiveFormat": "<trend|comparison|investment|factual>",
+  "chartNeeded": <true|false>,
+  "suggestedCharts": ["<chipId>", ...]
 }`
 
   const contextNote = context && context.parentPrompt && context.parentTitle
@@ -82,7 +105,7 @@ Set chartNeeded: true if a new chart/data query would meaningfully help answer t
   try {
     const message = await anthropic.messages.create({
       model: 'claude-opus-4-5',
-      max_tokens: 512,
+      max_tokens: 768,
       system: SYSTEM_PROMPT,
       messages: [{ role: 'user', content: fullUserMessage }],
     })
