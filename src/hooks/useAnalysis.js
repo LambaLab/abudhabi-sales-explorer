@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { query } from '../utils/db'
 import { intentToQuery, pivotChartData, computeSummaryStats } from '../utils/intentToQuery'
+import { parseAnalysis } from '../utils/parseAnalysis'
 
 async function fetchIntent(prompt, meta, signal, context = null) {
   const res = await fetch('/api/analyze', {
@@ -135,6 +136,10 @@ export function useAnalysis(meta, { addPost, patchPost, addReply, patchReply, ge
 
       if (signal.aborted) return
 
+      // ── Detect no-data: server returns JSON with suggestions instead of plain text ──
+      const { suggestions } = parseAnalysis(shortText)
+      const noData = !!(suggestions?.length > 0)
+
       // ── Step 5: finalise ──
       patchPost(postId, {
         status: 'done',
@@ -143,6 +148,8 @@ export function useAnalysis(meta, { addPost, patchPost, addReply, patchReply, ge
         summaryStats,              // stored for analyzeDeep
         fullText: null,
         isExpanded: false,
+        noData,
+        suggestions: suggestions ?? null,
       })
       if (mountedRef.current) setActivePostId(null)
     } catch (err) {
@@ -283,7 +290,17 @@ export function useAnalysis(meta, { addPost, patchPost, addReply, patchReply, ge
 
       if (signal.aborted) return
 
-      patchReply(postId, replyId, { status: 'done', analysisText: replyText })
+      // ── Detect no-data for reply ──
+      const { parsed: replyParsed, suggestions: replySuggestions } = parseAnalysis(replyText)
+      const replyNoData = !!(replySuggestions?.length > 0)
+
+      patchReply(postId, replyId, {
+        status: 'done',
+        // For replies: show just the headline in the chat bubble (structured view not used in AIBubble)
+        analysisText: replyNoData ? (replyParsed?.headline ?? replyText) : replyText,
+        noData: replyNoData,
+        suggestions: replyNoData ? replySuggestions : null,
+      })
       if (mountedRef.current) setActivePostId(null)
     } catch (err) {
       if (err.name === 'AbortError') {
