@@ -75,7 +75,7 @@ Suggestions MUST be queries this system can actually answer:
 price trends, price-per-sqm trends, transaction volumes, project comparisons, district comparisons, layout breakdowns.
 
 Example for "Ready vs Off-Plan Price Gap Since 2021":
-{"headline":"No Ready vs Off-Plan comparison data since 2021","analysis":"No dual-series transaction records found for this combination.","suggestions":[{"label":"Ready price trend 2021-2025","query":"Ready property price trend since 2021","reason":"Single sale type records exist where dual-series comparison data is absent"},{"label":"Off-plan volume by district","query":"Off-plan transaction volume by district 2021 to 2025","reason":"Volume data for off-plan properties covers the full requested timeframe"}]}
+{"headline":"No Ready vs Off-Plan comparison data since 2021","analysis":"No dual-series transaction records found for this combination.","suggestions":[{"label":"Ready price trend 2021-2025","query":"Ready property price trend since 2021","reason":"Ready records cover all 2021-2025 months"},{"label":"Off-plan volume by district","query":"Off-plan transaction volume by district 2021 to 2025","reason":"Off-plan volume data covers full timeframe"}]}
 
 Rules:
 - Return ONLY valid JSON — no markdown fences, no text outside the JSON object
