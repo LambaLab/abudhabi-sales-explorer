@@ -44,9 +44,9 @@ function Recommendation({ text }) {
 function TrendBlock({ data }) {
   return (
     <div className="space-y-3">
-      <p className="text-base font-bold text-slate-900 dark:text-white leading-snug">
+      <h3 className="text-base font-bold text-slate-900 dark:text-white leading-snug">
         {data.headline}
-      </p>
+      </h3>
       {data.keyMetrics?.length > 0 && (
         <div className="flex flex-wrap gap-2">
           {data.keyMetrics.map((m, i) => (
@@ -68,17 +68,25 @@ function ComparisonBlock({ data }) {
   const medals = ['🥇', '🥈', '🥉']
   return (
     <div className="space-y-3">
-      <p className="text-base font-bold text-slate-900 dark:text-white leading-snug">
+      <h3 className="text-base font-bold text-slate-900 dark:text-white leading-snug">
         {data.headline}
-      </p>
+      </h3>
       {data.ranking?.length > 0 && (
-        <div className="space-y-1.5">
+        <ul className="space-y-1.5 list-none" role="list">
           {data.ranking.map(r => (
-            <div
+            <li
               key={r.rank}
+              role="listitem"
+              aria-label={`Rank ${r.rank}: ${r.name}, ${r.metric}${r.note ? `, ${r.note}` : ''}`}
               className="flex items-center gap-2 rounded-lg bg-slate-50 dark:bg-slate-800/50 px-3 py-2"
             >
-              <span className="text-base shrink-0">{medals[r.rank - 1] ?? '•'}</span>
+              <span className="text-base shrink-0" aria-hidden="true">
+                {medals[r.rank - 1] ?? (
+                  <span className="inline-flex items-center justify-center h-6 w-6 rounded-full bg-slate-200 dark:bg-slate-600 text-xs font-bold text-slate-600 dark:text-slate-300">
+                    {r.rank}
+                  </span>
+                )}
+              </span>
               <span className="text-sm font-semibold text-slate-900 dark:text-white flex-1 min-w-0 truncate">
                 {r.name}
               </span>
@@ -86,9 +94,9 @@ function ComparisonBlock({ data }) {
               {r.note && (
                 <span className="text-xs text-slate-400 shrink-0 hidden sm:block">{r.note}</span>
               )}
-            </div>
+            </li>
           ))}
-        </div>
+        </ul>
       )}
       {data.analysis && <Md>{data.analysis}</Md>}
       <Recommendation text={data.recommendation} />
@@ -100,9 +108,9 @@ function ComparisonBlock({ data }) {
 function InvestmentBlock({ data }) {
   return (
     <div className="space-y-3">
-      <p className="text-base font-bold text-slate-900 dark:text-white leading-snug">
+      <h3 className="text-base font-bold text-slate-900 dark:text-white leading-snug">
         {data.headline}
-      </p>
+      </h3>
       {data.summary && (
         <p className="text-sm text-slate-600 dark:text-slate-300 italic">{data.summary}</p>
       )}
@@ -131,9 +139,9 @@ function InvestmentBlock({ data }) {
 function FactualBlock({ data }) {
   return (
     <div className="space-y-2">
-      <p className="text-base font-bold text-slate-900 dark:text-white leading-snug">
+      <h3 className="text-base font-bold text-slate-900 dark:text-white leading-snug">
         {data.headline}
-      </p>
+      </h3>
       {data.answer && (
         <p className="text-sm text-slate-700 dark:text-slate-300">{data.answer}</p>
       )}

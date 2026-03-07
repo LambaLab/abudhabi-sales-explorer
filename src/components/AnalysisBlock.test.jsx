@@ -82,4 +82,28 @@ describe('AnalysisBlock', () => {
     render(<AnalysisBlock text={json} adaptiveFormat="unknown_format" />)
     expect(screen.getByText('Test headline')).toBeInTheDocument()
   })
+
+  it('uses h3 for the headline element', () => {
+    const json = JSON.stringify({ headline: 'Test headline', analysis: 'Test.' })
+    const { container } = render(<AnalysisBlock text={json} adaptiveFormat="trend" />)
+    expect(container.querySelector('h3')).toBeInTheDocument()
+    expect(container.querySelector('h3').textContent).toBe('Test headline')
+  })
+
+  it('shows rank number badge for ranking items beyond position 3', () => {
+    const json = JSON.stringify({
+      headline: 'Top districts',
+      ranking: [
+        { rank: 1, name: 'A', metric: '+30%' },
+        { rank: 2, name: 'B', metric: '+20%' },
+        { rank: 3, name: 'C', metric: '+15%' },
+        { rank: 4, name: 'D', metric: '+10%' },
+      ],
+      analysis: '',
+      recommendation: '',
+    })
+    render(<AnalysisBlock text={json} adaptiveFormat="comparison" />)
+    // rank 4 should show '4' not a bullet
+    expect(screen.getByText('4')).toBeInTheDocument()
+  })
 })
