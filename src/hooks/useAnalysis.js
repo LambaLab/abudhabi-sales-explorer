@@ -3,6 +3,22 @@ import { query } from '../utils/db'
 import { intentToQuery, pivotChartData, computeSummaryStats } from '../utils/intentToQuery'
 import { parseAnalysis } from '../utils/parseAnalysis'
 
+/**
+ * If the model returned JSON despite being told not to (e.g. {"one_liner": "..."}),
+ * extract the most readable text field. Otherwise return the raw string after
+ * stripping any leftover markdown fences.
+ */
+function extractShortText(raw) {
+  if (!raw) return raw
+  const { parsed } = parseAnalysis(raw)
+  if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+    // Model returned JSON — extract first readable field
+    return parsed.one_liner ?? parsed.headline ?? parsed.answer ?? parsed.analysis ?? raw
+  }
+  // Strip any leftover code fences (```json ... ```)
+  return raw.replace(/^```[a-z]*\n?/i, '').replace(/\n?```\s*$/i, '').trim()
+}
+
 async function fetchIntent(prompt, meta, signal, context = null) {
   const res = await fetch('/api/analyze', {
     method: 'POST',
@@ -139,12 +155,13 @@ export function useAnalysis(meta, { addPost, patchPost, addReply, patchReply, ge
       // ── Detect no-data: server returns JSON with suggestions instead of plain text ──
       const { suggestions } = parseAnalysis(shortText)
       const noData = !!(suggestions?.length > 0)
+      const cleanShortText = noData ? shortText : extractShortText(shortText)
 
       // ── Step 5: finalise ──
       patchPost(postId, {
         status: 'done',
-        analysisText: shortText,   // compat alias
-        shortText,
+        analysisText: cleanShortText,
+        shortText: cleanShortText,
         summaryStats,              // stored for analyzeDeep
         fullText: null,
         isExpanded: false,
@@ -297,7 +314,7 @@ export function useAnalysis(meta, { addPost, patchPost, addReply, patchReply, ge
       patchReply(postId, replyId, {
         status: 'done',
         // For replies: show just the headline in the chat bubble (structured view not used in AIBubble)
-        analysisText: replyNoData ? (replyParsed?.headline ?? replyText) : replyText,
+        analysisText: replyNoData ? (replyParsed?.headline ?? replyText) : extractShortText(replyText),
         noData: replyNoData,
         suggestions: replyNoData ? replySuggestions : null,
       })

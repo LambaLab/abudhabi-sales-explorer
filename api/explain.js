@@ -9,8 +9,10 @@ const GROUNDING_CLAUSE = `
 CRITICAL: Only cite numbers that appear verbatim in the KEY DATA section below. Do not draw on your training knowledge of Abu Dhabi real estate prices, volumes, or market trends. Every AED figure, percentage, and transaction count you write must come directly from the provided data. If a number is not in the data, do not mention it.`
 
 const SHORT_PROMPT = `You are a real estate market analyst specializing in Abu Dhabi property.
-Write exactly 1 sentence with the single most important insight and the key number.
-No headers, no bullets, flowing prose only.${GROUNDING_CLAUSE}`
+Write exactly 1 complete sentence with the single most important insight and the key number.
+CRITICAL: Return ONLY plain English text — a single sentence ending with a period.
+Never return JSON, markdown code fences, structured data, or multiple sentences.
+No headers, no bullets, no formatting of any kind.${GROUNDING_CLAUSE}`
 
 const FULL_PROMPT = `You are a senior real estate market analyst with 15 years of Abu Dhabi property experience. You form direct, opinionated views backed strictly by the provided data.
 
