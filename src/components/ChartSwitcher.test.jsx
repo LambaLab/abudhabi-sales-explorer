@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { ChartSwitcher } from './ChartSwitcher'
 
 // Mock heavy chart deps
@@ -64,5 +64,35 @@ describe('ChartSwitcher', () => {
     const post = makePost({ intent: { ...makePost().intent, suggestedCharts: [] } })
     render(<ChartSwitcher post={post} />)
     expect(screen.queryByRole('button', { name: /line|bar|volume/i })).toBeNull()
+  })
+
+  it('collapses chart when active chip is clicked again on chartNeeded: false post', async () => {
+    const post = makePost({
+      chartData: [{ month: '2024-01', value: 1000000 }],
+      intent: {
+        ...makePost().intent,
+        chartNeeded: false,
+        suggestedCharts: ['line', 'bar'],
+      },
+    })
+    render(<ChartSwitcher post={post} />)
+    // No chart initially
+    expect(screen.queryByTestId('chart')).toBeNull()
+    // Click to show chart
+    fireEvent.click(screen.getByRole('button', { name: /^line$/i }))
+    expect(screen.getByTestId('chart')).toBeInTheDocument()
+    // Click same chip to collapse
+    fireEvent.click(screen.getByRole('button', { name: /^line$/i }))
+    await waitFor(() => expect(screen.queryByTestId('chart')).toBeNull())
+  })
+
+  it('calls query when chip has a different queryType than the post intent', async () => {
+    const { query: mockQuery } = await import('../utils/db')
+    render(<ChartSwitcher post={makePost()} />)
+    // 'volume' chip has queryType 'volume_trend', post has 'price_trend' → triggers DuckDB query
+    fireEvent.click(screen.getByRole('button', { name: /volume/i }))
+    // Give async handler a tick to run
+    await new Promise(r => setTimeout(r, 0))
+    expect(mockQuery).toHaveBeenCalled()
   })
 })
