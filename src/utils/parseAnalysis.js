@@ -13,9 +13,11 @@
 export function parseAnalysis(text) {
   if (!text) return { parsed: null, suggestions: null }
 
-  // Strip markdown code fences if present
+  // Strip any opening markdown fence (```json, ```javascript, ``` bare, etc.)
+  // The indexOf('{') / lastIndexOf('}') extraction below is the primary safety
+  // net — fence stripping is a best-effort pre-processing step.
   const stripped = text
-    .replace(/^```(?:json)?\s*/i, '')
+    .replace(/^```[a-z]*\s*/i, '')
     .replace(/\s*```\s*$/, '')
     .trim()
 
