@@ -192,3 +192,82 @@ describe('computeSummaryStats', () => {
     expect(stats.dateRange).toBeDefined()
   })
 })
+
+// Minimal row factory for price_trend
+function makeRows(months, startPrice = 1_000_000, step = 50_000) {
+  return months.map((m, i) => ({
+    month: m,
+    median_price: startPrice + i * step,
+    median_rate: 8000 + i * 200,
+    tx_count: 100 + i * 5,
+  }))
+}
+
+const MONTHS_24 = Array.from({ length: 24 }, (_, i) => {
+  const d = new Date(2022, i, 1)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+})
+
+describe('computeSummaryStats — enriched fields', () => {
+  it('includes latestValueFormatted as "AED X,XXX,XXX"', () => {
+    const rows = makeRows(MONTHS_24)
+    const stats = computeSummaryStats(rows, { queryType: 'price_trend' })
+    expect(stats.series[0].latestValueFormatted).toMatch(/^AED [\d,]+$/)
+  })
+
+  it('includes overallChangeFormatted with sign', () => {
+    const rows = makeRows(MONTHS_24)
+    const stats = computeSummaryStats(rows, { queryType: 'price_trend' })
+    expect(stats.series[0].overallChangeFormatted).toMatch(/^[+-]\d+\.\d+%$/)
+  })
+
+  it('includes rawSeries with all data points', () => {
+    const rows = makeRows(MONTHS_24)
+    const stats = computeSummaryStats(rows, { queryType: 'price_trend' })
+    expect(stats.rawSeries).toHaveLength(24)
+    expect(stats.rawSeries[0]).toMatchObject({ month: expect.any(String), value: expect.any(Number), label: expect.any(String) })
+  })
+
+  it('includes yoyChangeFormatted when >= 24 months of data', () => {
+    const rows = makeRows(MONTHS_24)
+    const stats = computeSummaryStats(rows, { queryType: 'price_trend' })
+    expect(stats.series[0].yoyChangeFormatted).toMatch(/^[+-]\d+\.\d+%$/)
+  })
+
+  it('yoyChangeFormatted is null when < 24 months', () => {
+    const rows = makeRows(MONTHS_24.slice(0, 12))
+    const stats = computeSummaryStats(rows, { queryType: 'price_trend' })
+    expect(stats.series[0].yoyChangeFormatted).toBeNull()
+  })
+
+  it('identifies troughMonth and troughValueFormatted correctly', () => {
+    const rows = makeRows(MONTHS_24) // prices increase monotonically, so trough = first
+    const stats = computeSummaryStats(rows, { queryType: 'price_trend' })
+    expect(stats.series[0].troughMonth).toBe(MONTHS_24[0])
+    expect(stats.series[0].troughValueFormatted).toMatch(/^AED [\d,]+$/)
+  })
+
+  it('includes cagrFormatted for price_trend with 24 months', () => {
+    const rows = makeRows(MONTHS_24)
+    const stats = computeSummaryStats(rows, { queryType: 'price_trend' })
+    expect(stats.series[0].cagrFormatted).toMatch(/^[+-]\d+\.\d+% CAGR$/)
+  })
+
+  it('includes rawSeries for volume_trend', () => {
+    const rows = MONTHS_24.map(m => ({ month: m, tx_count: 200 }))
+    const stats = computeSummaryStats(rows, { queryType: 'volume_trend' })
+    expect(stats.rawSeries).toHaveLength(24)
+    expect(stats.rawSeries[0]).toMatchObject({ month: expect.any(String), value: 200, label: expect.any(String) })
+  })
+
+  it('includes per-series enriched fields for multi-series', () => {
+    const rows = MONTHS_24.flatMap(m => [
+      { month: m, project_name: 'Alpha', median_price: 1_000_000, tx_count: 50 },
+      { month: m, project_name: 'Beta',  median_price: 800_000,   tx_count: 30 },
+    ])
+    const stats = computeSummaryStats(rows, { queryType: 'project_comparison' })
+    const alpha = stats.series.find(s => s.name === 'Alpha')
+    expect(alpha.latestValueFormatted).toMatch(/^AED/)
+    expect(alpha.overallChangeFormatted).toBeDefined()
+  })
+})

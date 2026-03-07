@@ -7,6 +7,37 @@ import {
   buildLayoutComparisonQuery,
 } from './queries.js'
 
+// ── Formatting helpers ──────────────────────────────────────────────────────
+
+function fmtAED(v) {
+  return `AED ${Math.round(v).toLocaleString('en-US')}`
+}
+
+function fmtPct(v) {
+  const sign = v >= 0 ? '+' : ''
+  return `${sign}${v.toFixed(1)}%`
+}
+
+function fmtMonth(month) {
+  if (!month) return ''
+  const [year, m] = month.split('-')
+  const names = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+  return `${names[parseInt(m, 10) - 1] ?? m} ${year}`
+}
+
+function computeYoY(sorted, valueKey) {
+  if (sorted.length < 24) return null
+  const last12 = sorted.slice(-12).reduce((a, r) => a + Number(r[valueKey]), 0) / 12
+  const prev12 = sorted.slice(-24, -12).reduce((a, r) => a + Number(r[valueKey]), 0) / 12
+  if (!prev12) return null
+  return Math.round((last12 - prev12) / prev12 * 1000) / 10
+}
+
+function computeCAGR(first, last, months) {
+  if (!first || months < 12) return null
+  return Math.round((Math.pow(last / first, 12 / months) - 1) * 1000) / 10
+}
+
 const SERIES_KEY = {
   project_comparison:  'project_name',
   district_comparison: 'district',
@@ -75,77 +106,140 @@ export function pivotChartData(rows, intent) {
 }
 
 /**
- * Compute summary statistics from raw DuckDB rows for the Claude /api/explain call.
+ * Compute enriched summary statistics from raw DuckDB rows for the Claude /api/explain call.
+ * Returns pre-computed formatted strings so Claude never needs to calculate or format numbers.
  */
 export function computeSummaryStats(rows, intent) {
   const { queryType } = intent
 
   if (!rows || rows.length === 0) {
-    return { series: [], dateRange: { from: null, to: null } }
+    return { series: [], rawSeries: [], dateRange: { from: null, to: null } }
   }
 
+  // ── volume_trend ────────────────────────────────────────────────────────
   if (queryType === 'volume_trend') {
     const sorted = [...rows].sort((a, b) => a.month.localeCompare(b.month))
-    const counts = sorted.map(r => Number(r.tx_count))
-    const peak = counts.length ? Math.max(...counts) : 0
+    const counts  = sorted.map(r => Number(r.tx_count))
+    const total   = counts.reduce((a, b) => a + b, 0)
+    const avg     = total / counts.length
+    const peak    = Math.max(...counts)
     const peakRow = sorted.find(r => Number(r.tx_count) === peak)
     return {
-      totalTransactions: counts.reduce((a, b) => a + b, 0),
-      avgMonthly: Math.round(counts.reduce((a, b) => a + b, 0) / counts.length),
-      peakMonth: peakRow?.month,
-      peakCount: peak,
-      dateRange: { from: sorted[0]?.month, to: sorted[sorted.length - 1]?.month },
+      totalTransactions: total,
+      avgMonthly: Math.round(avg),
+      peakMonth:  peakRow?.month,
+      peakCount:  peak,
+      dateRange:  { from: sorted[0]?.month, to: sorted[sorted.length - 1]?.month },
+      rawSeries:  sorted.map(r => ({
+        month: r.month,
+        value: Number(r.tx_count),
+        label: fmtMonth(r.month),
+      })),
     }
   }
 
   const pivotKey = SERIES_KEY[queryType]
 
+  // ── multi-series (project_comparison, district_comparison, layout_distribution) ──
   if (pivotKey) {
-    // Multi-series: group rows by series name
     const seriesMap = {}
     rows.forEach(row => {
       const key = String(row[pivotKey])
       if (!seriesMap[key]) seriesMap[key] = []
-      seriesMap[key].push({ month: row.month, price: Number(row.median_price), count: Number(row.tx_count) })
+      seriesMap[key].push({
+        month: row.month,
+        price: Number(row.median_price),
+        count: Number(row.tx_count),
+      })
     })
+
     const series = Object.entries(seriesMap).map(([name, points]) => {
       const sorted = [...points].sort((a, b) => a.month.localeCompare(b.month))
-      const first = sorted[0]?.price
-      const last  = sorted[sorted.length - 1]?.price
-      const peak  = Math.max(...sorted.map(p => p.price))
-      const peakPoint = sorted.find(p => p.price === peak)
+      const prices = sorted.map(p => p.price)
+      const first  = prices[0]
+      const last   = prices[prices.length - 1]
+      const peak   = Math.max(...prices)
+      const trough = Math.min(...prices)
+      const peakPt   = sorted.find(p => p.price === peak)
+      const troughPt = sorted.find(p => p.price === trough)
+      const months   = sorted.length
+      const pctChange = first ? Math.round((last - first) / first * 1000) / 10 : 0
+      const absChange = last - first
+      const cagr      = computeCAGR(first, last, months)
       return {
         name,
         first:     Math.round(first),
         last:      Math.round(last),
-        pctChange: first ? Math.round((last - first) / first * 1000) / 10 : 0,
+        pctChange,
         peak:      Math.round(peak),
-        peakMonth: peakPoint?.month,
+        peakMonth: peakPt?.month,
         txCount:   sorted.reduce((a, b) => a + b.count, 0),
+        latestMonth:              sorted[sorted.length - 1]?.month,
+        troughValue:              Math.round(trough),
+        troughMonth:              troughPt?.month,
+        yoyChange:                null,
+        cagr,
+        latestValueFormatted:     fmtAED(last),
+        peakValueFormatted:       fmtAED(peak),
+        troughValueFormatted:     fmtAED(trough),
+        overallChangeFormatted:   fmtPct(pctChange),
+        overallChangeAbsFormatted:(absChange >= 0 ? '+' : '') + fmtAED(Math.abs(absChange)),
+        yoyChangeFormatted:       null,
+        cagrFormatted:            cagr != null ? `${fmtPct(cagr)} CAGR` : null,
       }
     })
-    const sorted = [...rows].sort((a, b) => a.month.localeCompare(b.month))
-    return { series, dateRange: { from: sorted[0]?.month, to: sorted[sorted.length - 1]?.month } }
+
+    const allSorted = [...rows].sort((a, b) => a.month.localeCompare(b.month))
+    return {
+      series,
+      rawSeries: [],
+      dateRange: { from: allSorted[0]?.month, to: allSorted[allSorted.length - 1]?.month },
+    }
   }
 
-  // price_trend / rate_trend — single series
+  // ── single-series (price_trend / rate_trend) ─────────────────────────────
   const valueKey = queryType === 'rate_trend' ? 'median_rate' : 'median_price'
-  const sorted = [...rows].sort((a, b) => a.month.localeCompare(b.month))
-  const values = sorted.map(r => Number(r[valueKey])).filter(v => v > 0)
-  const first  = values[0]
-  const last   = values[values.length - 1]
-  const peak   = Math.max(...values)
-  const peakRow = sorted.find(r => Number(r[valueKey]) === peak)
+  const sorted   = [...rows].sort((a, b) => a.month.localeCompare(b.month))
+  const values   = sorted.map(r => Number(r[valueKey])).filter(v => v > 0)
+  const first    = values[0]
+  const last     = values[values.length - 1]
+  const peak     = Math.max(...values)
+  const trough   = Math.min(...values)
+  const peakRow   = sorted.find(r => Number(r[valueKey]) === peak)
+  const troughRow = sorted.find(r => Number(r[valueKey]) === trough)
+  const months    = sorted.length
+  const pctChange = first ? Math.round((last - first) / first * 1000) / 10 : 0
+  const absChange = last - first
+  const yoyChange = computeYoY(sorted, valueKey)
+  const cagr      = computeCAGR(first, last, months)
+
   return {
     series: [{
       name:      'All',
       first:     Math.round(first),
       last:      Math.round(last),
-      pctChange: first ? Math.round((last - first) / first * 1000) / 10 : 0,
+      pctChange,
       peak:      Math.round(peak),
       peakMonth: peakRow?.month,
       txCount:   sorted.reduce((a, b) => a + Number(b.tx_count), 0),
+      latestMonth:              sorted[sorted.length - 1]?.month,
+      troughValue:              Math.round(trough),
+      troughMonth:              troughRow?.month,
+      yoyChange,
+      cagr,
+      latestValueFormatted:     fmtAED(last),
+      peakValueFormatted:       fmtAED(peak),
+      troughValueFormatted:     fmtAED(trough),
+      overallChangeFormatted:   fmtPct(pctChange),
+      overallChangeAbsFormatted:(absChange >= 0 ? '+' : '') + fmtAED(Math.abs(absChange)),
+      yoyChangeFormatted:       yoyChange != null ? fmtPct(yoyChange) : null,
+      cagrFormatted:            cagr != null ? `${fmtPct(cagr)} CAGR` : null,
     }],
+    rawSeries: sorted.map(r => ({
+      month: r.month,
+      value: Math.round(Number(r[valueKey])),
+      label: fmtMonth(r.month),
+    })),
     dateRange: { from: sorted[0]?.month, to: sorted[sorted.length - 1]?.month },
   }
 }
