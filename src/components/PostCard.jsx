@@ -31,7 +31,7 @@ function LoadingSkeleton() {
 }
 
 /** Inline follow-up input that lives at the bottom of each PostCard */
-function ReplyInput({ postId, onSubmit, disabled }) {
+function ReplyInput({ postId, onSubmit, disabled, label = 'Ask a follow-up' }) {
   const [open, setOpen]   = useState(false)
   const [value, setValue] = useState('')
   const textareaRef = useRef(null)
@@ -70,9 +70,13 @@ function ReplyInput({ postId, onSubmit, disabled }) {
         className="text-sm text-slate-400 dark:text-slate-500 hover:text-accent dark:hover:text-accent transition-colors flex items-center gap-1.5 disabled:opacity-30 disabled:cursor-not-allowed"
       >
         <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+          {label === 'Ask a follow-up' ? (
+            <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+          ) : (
+            <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+          )}
         </svg>
-        Ask a follow-up
+        {label}
       </button>
     )
   }
@@ -325,36 +329,52 @@ export function PostCard({ post, onReply, isActive, onCancel, onDeepAnalysis, ch
                 adaptiveFormat={post.intent?.adaptiveFormat}
               />
 
-              {/* Deeper analysis link */}
-              {(isDone || post.status === 'deepening') && onDeepAnalysis && (
-                <button
-                  onClick={() => onDeepAnalysis(post.id)}
-                  disabled={post.status === 'deepening'}
-                  className="flex items-center gap-1 text-xs text-slate-400 dark:text-slate-500 hover:text-accent dark:hover:text-accent transition-colors disabled:opacity-40 mt-1"
-                >
-                  {post.status === 'deepening' ? (
-                    <>
-                      <svg className="h-3 w-3 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v3m0 12v3M3 12h3m12 0h3"/>
-                      </svg>
-                      Loading deeper analysis…
-                    </>
-                  ) : post.isExpanded ? (
-                    <>
+              {/* Deeper analysis / Explore alternatives */}
+              {(isDone || post.status === 'deepening') && (
+                post.noData ? (
+                  post.suggestions?.length > 0 && onReply && (
+                    <button
+                      onClick={() => requireAuth(() => onReply(post.id, post.suggestions[0].query))}
+                      className="flex items-center gap-1 text-xs text-slate-400 dark:text-slate-500 hover:text-accent dark:hover:text-accent transition-colors mt-1"
+                    >
                       <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 15l7-7 7 7"/>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.346.346a7.5 7.5 0 01-2.121 2.121 5 5 0 01-7.072 0l-.346-.346a5 5 0 010-7.072z"/>
                       </svg>
-                      Less
-                    </>
-                  ) : (
-                    <>
-                      <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7"/>
-                      </svg>
-                      Deeper analysis
-                    </>
-                  )}
-                </button>
+                      Explore alternatives
+                    </button>
+                  )
+                ) : (
+                  onDeepAnalysis && (
+                    <button
+                      onClick={() => onDeepAnalysis(post.id)}
+                      disabled={post.status === 'deepening'}
+                      className="flex items-center gap-1 text-xs text-slate-400 dark:text-slate-500 hover:text-accent dark:hover:text-accent transition-colors disabled:opacity-40 mt-1"
+                    >
+                      {post.status === 'deepening' ? (
+                        <>
+                          <svg className="h-3 w-3 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v3m0 12v3M3 12h3m12 0h3"/>
+                          </svg>
+                          Loading deeper analysis…
+                        </>
+                      ) : post.isExpanded ? (
+                        <>
+                          <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 15l7-7 7 7"/>
+                          </svg>
+                          Less
+                        </>
+                      ) : (
+                        <>
+                          <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7"/>
+                          </svg>
+                          Deeper analysis
+                        </>
+                      )}
+                    </button>
+                  )
+                )
               )}
             </>
           ) : (
@@ -406,6 +426,33 @@ export function PostCard({ post, onReply, isActive, onCancel, onDeepAnalysis, ch
         </div>
       )}
 
+      {/* ── No-data suggestion rows ── */}
+      {onReply && isDone && post.noData && post.suggestions?.length > 0 && !post.replies?.length && (
+        <div className="flex flex-col gap-1.5 pt-1">
+          {post.suggestions.map((s, i) => (
+            <button
+              key={i}
+              type="button"
+              onClick={() => requireAuth(() => onReply(post.id, s.query))}
+              disabled={hasActiveReply}
+              className="flex items-center gap-2.5 w-full text-left rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/60 px-3 py-2.5 text-sm text-slate-700 dark:text-slate-300 hover:border-accent hover:text-accent transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <svg className="h-4 w-4 shrink-0 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+              </svg>
+              {s.label}
+            </button>
+          ))}
+          {/* "Something else…" — last item, expands to reply input inline */}
+          <ReplyInput
+            postId={post.id}
+            onSubmit={onReply}
+            disabled={hasActiveReply}
+            label="Something else…"
+          />
+        </div>
+      )}
+
       {/* ── Clarification chips (shown when clarifyOptions exist and no replies yet) ── */}
       {onReply && isDone && post.clarifyOptions?.length > 0 && !post.replies?.length && (
         <div className="flex flex-wrap gap-2 pt-1">
@@ -423,8 +470,8 @@ export function PostCard({ post, onReply, isActive, onCancel, onDeepAnalysis, ch
         </div>
       )}
 
-      {/* ── Inline reply input (only when post is done and onReply provided) ── */}
-      {onReply && isDone && (
+      {/* ── Inline reply input (hidden while no-data suggestions are visible) ── */}
+      {onReply && isDone && !(post.noData && !post.replies?.length) && (
         <div className="pt-1">
           {user ? (
             <ReplyInput postId={post.id} onSubmit={onReply} disabled={hasActiveReply} />
