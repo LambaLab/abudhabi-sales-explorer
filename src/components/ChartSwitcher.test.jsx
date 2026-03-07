@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { ChartSwitcher } from './ChartSwitcher'
 
@@ -10,6 +10,9 @@ vi.mock('./DateRangePickerPopover', () => ({
   DateRangePickerPopover: () => <div data-testid="date-picker" />,
 }))
 vi.mock('../utils/db', () => ({ query: vi.fn().mockResolvedValue([]) }))
+
+// vi.mock is hoisted before imports, so this resolves to the mock
+import { query as mockQuery } from '../utils/db'
 
 function makePost(overrides = {}) {
   return {
@@ -29,6 +32,10 @@ function makePost(overrides = {}) {
 }
 
 describe('ChartSwitcher', () => {
+  beforeEach(() => {
+    mockQuery.mockClear()
+  })
+
   it('renders the chart when chartNeeded is true', () => {
     render(<ChartSwitcher post={makePost()} />)
     expect(screen.getByTestId('chart')).toBeInTheDocument()
@@ -87,12 +94,9 @@ describe('ChartSwitcher', () => {
   })
 
   it('calls query when chip has a different queryType than the post intent', async () => {
-    const { query: mockQuery } = await import('../utils/db')
     render(<ChartSwitcher post={makePost()} />)
     // 'volume' chip has queryType 'volume_trend', post has 'price_trend' → triggers DuckDB query
     fireEvent.click(screen.getByRole('button', { name: /volume/i }))
-    // Give async handler a tick to run
-    await new Promise(r => setTimeout(r, 0))
-    expect(mockQuery).toHaveBeenCalled()
+    await waitFor(() => expect(mockQuery).toHaveBeenCalled())
   })
 })

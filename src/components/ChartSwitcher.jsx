@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { DynamicChart }          from './charts/DynamicChart'
 import { DateRangePickerPopover } from './DateRangePickerPopover'
 import { CHIP_META }             from '../utils/chipToQuery'
@@ -25,6 +25,7 @@ export function ChartSwitcher({ post }) {
   const [localChartKeys, setLocalChartKeys] = useState(null)
   const [chipLoading, setChipLoading]       = useState(false)
   const [dateRange, setDateRange]           = useState({ dateFrom: '', dateTo: '' })
+  const querySeqRef = useRef(0)
 
   const chartData = localChartData ?? initialChartData
   const chartKeys = localChartKeys ?? initialChartKeys
@@ -43,20 +44,22 @@ export function ChartSwitcher({ post }) {
 
     if (meta.queryType && meta.queryType !== intent?.queryType) {
       // Different queryType — run a fresh DuckDB query
+      const seq = ++querySeqRef.current
       setChipLoading(true)
       try {
         const newIntent = { ...intent, queryType: meta.queryType, chartType: meta.chartType }
         const { sql, params } = intentToQuery(newIntent)
         if (sql) {
           const rows = await query(sql, params)
+          if (seq !== querySeqRef.current) return  // stale response — discard
           const { chartData: cd, chartKeys: ck } = pivotChartData(rows, newIntent)
           setLocalChartData(cd)
           setLocalChartKeys(ck)
         }
       } catch (err) {
-        console.error('[ChartSwitcher] query error:', err)
+        if (seq === querySeqRef.current) console.error('[ChartSwitcher] query error:', err)
       } finally {
-        setChipLoading(false)
+        if (seq === querySeqRef.current) setChipLoading(false)
       }
     } else {
       // Same queryType, different chartType — reset local overrides, use existing data
