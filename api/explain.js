@@ -69,7 +69,7 @@ Return a JSON object with exactly these keys:
 - "suggestions": an array of EXACTLY 2 objects, each with:
     - "label": 2-5 word display label (used as the query chip text)
     - "query": the exact query string the user should run next (natural language, 4-10 words)
-    - "reason": one sentence why this alternative would return real data
+    - "reason": a brief, friendly explanation of what this query will show (max 8 words, plain English, no technical jargon — e.g. "Available for all districts in 2024")
 
 Suggestions MUST be queries this system can actually answer:
 price trends, price-per-sqm trends, transaction volumes, project comparisons, district comparisons, layout breakdowns.

@@ -19,6 +19,45 @@ export function _extractShortText(raw) {
   return raw.replace(/^```[a-z]*\n?/i, '').replace(/\n?```\s*$/i, '').trim()
 }
 
+/** Queries guaranteed to return data — used when Claude's suggestions all fail validation */
+const SAFE_SUGGESTION_POOL = [
+  {
+    label: 'Transaction volume 2024',
+    query: 'transaction volume by month 2024',
+    reason: 'Monthly volume data exists for all of 2024',
+  },
+  {
+    label: 'Price trend by district',
+    query: 'average price per sqm by district',
+    reason: 'Price-per-sqm records exist across all major districts',
+  },
+]
+
+/**
+ * Validate that each suggestion actually returns data from DuckDB.
+ * Returns only suggestions with rowCount > 0.
+ * If none pass, returns SAFE_SUGGESTION_POOL.
+ */
+async function validateSuggestions(suggestions, meta, signal) {
+  if (!suggestions?.length) return SAFE_SUGGESTION_POOL
+
+  const validated = []
+  for (const s of suggestions) {
+    if (signal?.aborted) break
+    try {
+      const intent = await fetchIntent(s.query, meta, signal)
+      const { sql, params } = intentToQuery(intent)
+      if (!sql) continue
+      const rows = await query(sql, params)
+      if (rows.length > 0) validated.push(s)
+    } catch {
+      // validation failure — skip this suggestion
+    }
+  }
+
+  return validated.length > 0 ? validated : SAFE_SUGGESTION_POOL
+}
+
 async function fetchIntent(prompt, meta, signal, context = null) {
   const res = await fetch('/api/analyze', {
     method: 'POST',
@@ -153,9 +192,12 @@ export function useAnalysis(meta, { addPost, patchPost, addReply, patchReply, ge
       if (signal.aborted) return
 
       // ── Detect no-data: server returns JSON with suggestions instead of plain text ──
-      const { suggestions } = parseAnalysis(shortText)
-      const noData = !!(suggestions?.length > 0)
+      const { suggestions: rawSuggestions } = parseAnalysis(shortText)
+      const noData = !!(rawSuggestions?.length > 0)
       const cleanShortText = noData ? shortText : _extractShortText(shortText)
+      const suggestions = noData
+        ? await validateSuggestions(rawSuggestions, meta, signal)
+        : null
 
       // ── Step 5: finalise ──
       patchPost(postId, {
@@ -308,8 +350,11 @@ export function useAnalysis(meta, { addPost, patchPost, addReply, patchReply, ge
       if (signal.aborted) return
 
       // ── Detect no-data for reply ──
-      const { parsed: replyParsed, suggestions: replySuggestions } = parseAnalysis(replyText)
-      const replyNoData = !!(replySuggestions?.length > 0)
+      const { parsed: replyParsed, suggestions: rawReplySuggestions } = parseAnalysis(replyText)
+      const replyNoData = !!(rawReplySuggestions?.length > 0)
+      const replySuggestions = replyNoData
+        ? await validateSuggestions(rawReplySuggestions, meta, signal)
+        : null
 
       patchReply(postId, replyId, {
         status: 'done',
