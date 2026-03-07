@@ -99,4 +99,10 @@ describe('ChartSwitcher', () => {
     fireEvent.click(screen.getByRole('button', { name: /volume/i }))
     await waitFor(() => expect(mockQuery).toHaveBeenCalled())
   })
+
+  it('renders nothing when post.noData is true', () => {
+    const post = makePost({ noData: true })
+    const { container } = render(<ChartSwitcher post={post} />)
+    expect(container.firstChild).toBeNull()
+  })
 })

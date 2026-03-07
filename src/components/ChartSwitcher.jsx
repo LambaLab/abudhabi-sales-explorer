@@ -27,6 +27,10 @@ export function ChartSwitcher({ post }) {
   const [dateRange, setDateRange]           = useState({ dateFrom: '', dateTo: '' })
   const querySeqRef = useRef(0)
 
+  // Hide everything when there is no data — PostCard's suggestion rows handle the UX instead
+  if (post.noData) return null
+
+  
   const chartData = localChartData ?? initialChartData
   const chartKeys = localChartKeys ?? initialChartKeys
 
