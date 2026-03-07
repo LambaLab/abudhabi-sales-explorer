@@ -1,5 +1,6 @@
 import ReactMarkdown from 'react-markdown'
 import rehypeSanitize from 'rehype-sanitize'
+import { parseAnalysis } from '../utils/parseAnalysis'
 
 /** Shared markdown renderer with Tailwind prose styles */
 function Md({ children }) {
@@ -157,33 +158,13 @@ function FactualBlock({ data }) {
  * - If text is plain string (short-mode or legacy), renders as plain <p>.
  * - adaptiveFormat drives which rich layout to use.
  *
- * JSON extraction is deliberately robust:
- * 1. Strips optional markdown fences (```json … ```) Claude sometimes adds
- * 2. Extracts the first { … } substring to handle any preamble/postamble text
- * This mirrors what /api/explain's clarify mode already does client-side.
+ * JSON extraction is delegated to parseAnalysis() from src/utils/parseAnalysis.js,
+ * which handles fence stripping, {…} substring extraction, and error recovery.
  */
 export function AnalysisBlock({ text, adaptiveFormat }) {
   if (!text) return null
 
-  let parsed = null
-
-  // Strip markdown code fences if present, then find the first JSON object
-  const stripped = text
-    .replace(/^```(?:json)?\s*/i, '')
-    .replace(/\s*```\s*$/, '')
-    .trim()
-
-  const jsonStart = stripped.indexOf('{')
-  const jsonEnd   = stripped.lastIndexOf('}')
-
-  if (jsonStart !== -1 && jsonEnd > jsonStart) {
-    try {
-      const obj = JSON.parse(stripped.slice(jsonStart, jsonEnd + 1))
-      if (typeof obj === 'object' && !Array.isArray(obj)) parsed = obj
-    } catch {
-      // not valid JSON in the extracted slice — fall through to plain text
-    }
-  }
+  const { parsed } = parseAnalysis(text)
 
   if (!parsed) {
     return (
