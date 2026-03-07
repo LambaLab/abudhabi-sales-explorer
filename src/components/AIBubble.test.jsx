@@ -78,4 +78,36 @@ describe('AIBubble', () => {
     const img = document.querySelector('img[src="/octopus.png"]')
     expect(img).toBeTruthy()
   })
+
+  it('renders suggestion labels when reply.suggestions is present', () => {
+    render(<AIBubble
+      reply={{
+        ...BASE,
+        suggestions: [
+          { label: 'Price trend 2024', query: 'price trend 2024', reason: 'internal' },
+          { label: 'Volume by district', query: 'volume by district', reason: 'internal' },
+        ],
+      }}
+      onReply={() => {}}
+      postId="p1"
+    />)
+    expect(screen.getByText('Price trend 2024')).toBeInTheDocument()
+    expect(screen.getByText('Volume by district')).toBeInTheDocument()
+  })
+
+  it('calls onReply with s.query when suggestion button is clicked', () => {
+    const onReply = vi.fn()
+    render(<AIBubble
+      reply={{
+        ...BASE,
+        suggestions: [
+          { label: 'Price trend 2024', query: 'price trend since 2024', reason: 'internal' },
+        ],
+      }}
+      onReply={onReply}
+      postId="p1"
+    />)
+    screen.getByText('Price trend 2024').click()
+    expect(onReply).toHaveBeenCalledWith('p1', 'price trend since 2024')
+  })
 })
