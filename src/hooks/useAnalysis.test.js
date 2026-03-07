@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { parseAnalysis } from '../utils/parseAnalysis'
+import { _extractShortText } from './useAnalysis'
 
 describe('no-data detection', () => {
   it('sets noData: true when explain returns JSON with suggestions', async () => {
@@ -11,7 +12,6 @@ describe('no-data detection', () => {
         { label: 'Off-plan volume', query: 'Off-plan volume by district', reason: 'Has data' },
       ],
     })
-    const { parseAnalysis } = await import('../utils/parseAnalysis')
     const { parsed, suggestions } = parseAnalysis(suggestionsJson)
     expect(suggestions).toHaveLength(2)
     expect(suggestions[0].label).toBe('Ready trend')
@@ -21,24 +21,34 @@ describe('no-data detection', () => {
   })
 
   it('sets noData: false when explain returns plain text', async () => {
-    const { parseAnalysis } = await import('../utils/parseAnalysis')
     const { suggestions } = parseAnalysis('Prices rose 18% in the last 12 months.')
     const noData = !!(suggestions?.length > 0)
     expect(noData).toBe(false)
   })
 })
 
-describe('extractShortText logic (via parseAnalysis)', () => {
-  it('extracts headline when model returns JSON instead of plain text', () => {
-    const { parsed } = parseAnalysis('{"headline":"Prices rose 12%.","analysis":"steady growth"}')
-    const extracted = parsed?.one_liner ?? parsed?.headline ?? parsed?.answer ?? parsed?.analysis
-    expect(extracted).toBe('Prices rose 12%.')
+describe('_extractShortText', () => {
+  it('extracts headline when model returns JSON with headline field', () => {
+    expect(_extractShortText('{"headline":"Prices rose 12%.","analysis":"steady growth"}')).toBe('Prices rose 12%.')
   })
 
-  it('returns raw text when model returns plain text (parsed is null)', () => {
-    const { parsed } = parseAnalysis('Hello world.')
-    expect(parsed).toBeNull()
-    const result = parsed ? (parsed.one_liner ?? parsed.headline ?? 'Hello world.') : 'Hello world.'
-    expect(result).toBe('Hello world.')
+  it('prefers one_liner over headline when both present', () => {
+    expect(_extractShortText('{"one_liner":"Short answer.","headline":"Long answer."}')).toBe('Short answer.')
+  })
+
+  it('returns plain text unchanged', () => {
+    expect(_extractShortText('Prices rose 12% in Q1.')).toBe('Prices rose 12% in Q1.')
+  })
+
+  it('strips markdown code fences from plain text', () => {
+    expect(_extractShortText('```json\n{"headline":"test"}\n```')).toBe('test')
+  })
+
+  it('returns empty string for unknown-field JSON (no known readable field)', () => {
+    expect(_extractShortText('{"unknown_field":"something"}')).toBe('')
+  })
+
+  it('returns raw input unchanged when input is falsy (null)', () => {
+    expect(_extractShortText(null)).toBeNull()
   })
 })

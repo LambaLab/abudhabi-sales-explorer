@@ -278,7 +278,7 @@ Filters applied: ${JSON.stringify(intent.filters)}
 
 ${formatSummaryStats(summaryStats, intent.queryType)}
 
-Write the analyst JSON now.`
+${mode === 'short' ? 'Write your one-sentence insight now.' : 'Write the analyst JSON now.'}`
 
   const stream = anthropic.messages.stream({
     model: 'claude-opus-4-5',

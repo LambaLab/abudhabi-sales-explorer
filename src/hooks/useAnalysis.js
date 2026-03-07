@@ -8,12 +8,12 @@ import { parseAnalysis } from '../utils/parseAnalysis'
  * extract the most readable text field. Otherwise return the raw string after
  * stripping any leftover markdown fences.
  */
-function extractShortText(raw) {
+export function _extractShortText(raw) {
   if (!raw) return raw
   const { parsed } = parseAnalysis(raw)
   if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
     // Model returned JSON — extract first readable field
-    return parsed.one_liner ?? parsed.headline ?? parsed.answer ?? parsed.analysis ?? raw
+    return parsed.one_liner ?? parsed.headline ?? parsed.answer ?? parsed.analysis ?? ''
   }
   // Strip any leftover code fences (```json ... ```)
   return raw.replace(/^```[a-z]*\n?/i, '').replace(/\n?```\s*$/i, '').trim()
@@ -155,7 +155,7 @@ export function useAnalysis(meta, { addPost, patchPost, addReply, patchReply, ge
       // ── Detect no-data: server returns JSON with suggestions instead of plain text ──
       const { suggestions } = parseAnalysis(shortText)
       const noData = !!(suggestions?.length > 0)
-      const cleanShortText = noData ? shortText : extractShortText(shortText)
+      const cleanShortText = noData ? shortText : _extractShortText(shortText)
 
       // ── Step 5: finalise ──
       patchPost(postId, {
@@ -314,7 +314,7 @@ export function useAnalysis(meta, { addPost, patchPost, addReply, patchReply, ge
       patchReply(postId, replyId, {
         status: 'done',
         // For replies: show just the headline in the chat bubble (structured view not used in AIBubble)
-        analysisText: replyNoData ? (replyParsed?.headline ?? replyText) : extractShortText(replyText),
+        analysisText: replyNoData ? (replyParsed?.headline ?? replyText) : _extractShortText(replyText),
         noData: replyNoData,
         suggestions: replyNoData ? replySuggestions : null,
       })
