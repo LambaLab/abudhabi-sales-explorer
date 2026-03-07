@@ -40,6 +40,45 @@ const CLARIFY_FALLBACK = {
   question: 'What data interests you?',
   options: ['Price trends', 'Transaction volumes', 'District comparison'],
 }
+/**
+ * Returns true if summaryStats contains at least one meaningful data point.
+ * Used to decide whether to return suggestions instead of a plain-text sentence.
+ */
+function hasData(summaryStats) {
+  if (!summaryStats) return false
+  if (Number(summaryStats.totalTransactions) > 0) return true
+  if (summaryStats.series?.some(s =>
+    s.txCount > 0 || s.first !== undefined || s.latestValueFormatted
+  )) return true
+  return false
+}
+
+/**
+ * Used in short mode when the query returned no data.
+ * Returns minimal JSON with headline + 2 alternative suggestions.
+ * Haiku is sufficient — this is a routing/suggestion task, not analysis.
+ */
+const SHORT_NODATA_PROMPT = `You are a real estate data assistant for the Abu Dhabi property market.
+The user queried data that does not exist in the current dataset.
+
+Return a JSON object with exactly these keys:
+- "headline": a concise explanation of why data is unavailable (max 12 words, no trailing period)
+- "analysis": one sentence explaining what was missing (plain text, no markdown)
+- "suggestions": an array of EXACTLY 2 objects, each with:
+    - "label": 2-5 word display label (used as the query chip text)
+    - "query": the exact query string the user should run next (natural language, 4-10 words)
+    - "reason": one sentence why this alternative would return real data
+
+Suggestions MUST be queries this system can actually answer:
+price trends, price-per-sqm trends, transaction volumes, project comparisons, district comparisons, layout breakdowns.
+
+Example for "Ready vs Off-Plan Price Gap Since 2021":
+{"headline":"No Ready vs Off-Plan comparison data since 2021","analysis":"No dual-series transaction records found for this combination.","suggestions":[{"label":"Ready price trend 2021-2025","query":"Ready property price trend since 2021","reason":"Single sale type records exist where dual-series comparison data is absent"},{"label":"Off-plan volume by district","query":"Off-plan transaction volume by district 2021 to 2025","reason":"Volume data for off-plan properties covers the full requested timeframe"}]}
+
+Rules:
+- Return ONLY valid JSON — no markdown fences, no text outside the JSON object
+- headline must be factual, not apologetic ("No X data" not "Unfortunately...")
+- suggestions must be genuinely useful alternatives, not rephrasing the same broken query`
 
 const CLARIFY_PROMPT = `You are a friendly real estate data assistant for the Abu Dhabi property market.
 The user asked a question this system cannot directly answer. This system can show: price trends, price-per-sqm trends, transaction volumes, project comparisons, district comparisons, and layout breakdowns.
@@ -198,6 +237,31 @@ export default async function handler(req) {
         console.warn('[explain] clarify: Anthropic API error:', err.message)
       }
       return Response.json(CLARIFY_FALLBACK)
+    }
+  }
+
+
+  // ── Short-mode no-data: return suggestions JSON instead of a 1-sentence summary ──
+  if (mode === 'short' && !hasData(summaryStats)) {
+    try {
+      const msg = await anthropic.messages.create({
+        model: 'claude-haiku-4-5',
+        max_tokens: 350,
+        system: SHORT_NODATA_PROMPT,
+        messages: [{
+          role: 'user',
+          content: `The user asked: "${prompt}"\nQuery type: ${intent.queryType}\nFilters: ${JSON.stringify(intent.filters)}`,
+        }],
+      })
+      const rawText = msg?.content?.[0]?.text ?? '{}'
+      // Clean fences just in case
+      const cleaned = rawText.replace(/^```[a-z]*\n?/i, '').replace(/\n?```\n?$/, '').trim()
+      return new Response(cleaned, {
+        headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+      })
+    } catch (err) {
+      console.warn('[explain] nodata suggestions failed:', err.message)
+      // Fall through to normal short-mode path — better than crashing
     }
   }
 
