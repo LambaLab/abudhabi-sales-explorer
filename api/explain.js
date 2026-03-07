@@ -12,15 +12,29 @@ const SHORT_PROMPT = `You are a real estate market analyst specializing in Abu D
 Write exactly 1 sentence with the single most important insight and the key number.
 No headers, no bullets, flowing prose only.${GROUNDING_CLAUSE}`
 
-const FULL_PROMPT = `You are a real estate market analyst specializing in Abu Dhabi property.
-Write clear, accessible analysis for sophisticated investors.
-Rules:
-- Write exactly 2-3 paragraphs of flowing prose — NO headers, NO bullet points, NO markdown
-- Lead with the single most important insight
-- Use specific numbers and percentages from the data
-- Compare and contrast when multiple series exist
-- End with a brief forward-looking observation if the data supports one
-- Keep language accessible to non-experts while remaining precise${GROUNDING_CLAUSE}`
+const FULL_PROMPT = `You are a senior real estate market analyst with 15 years of Abu Dhabi property experience. You form direct, opinionated views backed strictly by the provided data.
+
+Your JSON response schema depends on the "adaptiveFormat" field in the intent:
+
+TREND (adaptiveFormat = "trend"):
+{"headline":"<punchy 1-sentence title leading with the key number and direction>","keyMetrics":[{"label":"<metric name>","value":"<exact string from METRICS — 3-4 items max>"}],"analysis":"<2-3 short markdown paragraphs — use **bold** for key numbers>","recommendation":"<markdown — start with a direct verdict like 'Strong buy signal.' then explain why>"}
+
+COMPARISON (adaptiveFormat = "comparison"):
+{"headline":"<punchy summary of who leads and by how much>","ranking":[{"rank":1,"name":"<series name>","metric":"<key number from METRICS>","note":"<5 words max characterizing this entry>"}],"analysis":"<2-3 short markdown paragraphs>","recommendation":"<markdown — name the winner and explain why an investor should care>"}
+
+INVESTMENT (adaptiveFormat = "investment"):
+{"headline":"<direct phrase answering the investment question>","summary":"<1 sentence direct answer>","marketData":"<markdown — what the data shows, with specific numbers>","riskFactors":"<markdown — honest caveats from the data only, not generic warnings>","recommendation":"<markdown — your direct opinion, never hedge, always commit to a view>"}
+
+FACTUAL (adaptiveFormat = "factual"):
+{"headline":"<the answer itself as the headline, e.g. '4,821 transactions in 2024'>","answer":"<plain text direct answer>","context":"<optional 1-paragraph markdown — only if useful context exists, otherwise omit>"}
+
+Global rules:
+- Every AED figure, percentage, and count must appear verbatim in METRICS or RAW DATA below — never calculate or estimate
+- Write as a confident analyst — not "it may be worth considering" but "this is the strongest growth story in Abu Dhabi right now"
+- keyMetrics: 3-4 items maximum, copy values exactly as they appear in METRICS strings
+- Use **bold** for key numbers in markdown prose sections
+- recommendation must start with a clear verdict statement (e.g. "Strong buy.", "Avoid for now.", "Best value play in the market.")
+- Return ONLY valid JSON — no markdown fences, no text outside the JSON object${GROUNDING_CLAUSE}`
 
 const CLARIFY_FALLBACK = {
   question: 'What data interests you?',
@@ -48,6 +62,7 @@ Rules:
 /**
  * Render summaryStats as a labelled plain-text block so the model
  * can parse the numbers reliably without needing to read JSON.
+ * Uses enriched fields from computeSummaryStats when available, falls back to legacy.
  */
 function formatSummaryStats(stats, queryType) {
   if (!stats) return 'No data available.'
@@ -57,44 +72,78 @@ function formatSummaryStats(stats, queryType) {
   if (stats.dateRange?.from || stats.dateRange?.to) {
     const from = stats.dateRange.from ?? 'start'
     const to   = stats.dateRange.to   ?? 'present'
-    lines.push(`• Date range: ${from} to ${to}`)
+    lines.push(`Date range: ${from} to ${to}`)
   }
 
-  // volume_trend
+  // ── volume_trend ──────────────────────────────────────────────────────────
   if (stats.totalTransactions !== undefined) {
-    lines.push(`• Total transactions in period: ${Number(stats.totalTransactions).toLocaleString()}`)
-    if (stats.avgMonthly)  lines.push(`• Monthly average: ${Number(stats.avgMonthly).toLocaleString()}`)
-    if (stats.peakMonth && stats.peakCount != null) lines.push(`• Peak month: ${stats.peakMonth} with ${Number(stats.peakCount).toLocaleString()} transactions`)
-    return lines.join('\n')
-  }
-
-  // multi-series (project_comparison, district_comparison, layout_distribution)
-  if (stats.series?.length > 1) {
-    for (const s of stats.series) {
-      lines.push(`\nSeries: ${s.name}`)
-      lines.push(`  • Starting value: AED ${Number(s.first).toLocaleString()}`)
-      lines.push(`  • Latest value:   AED ${Number(s.last).toLocaleString()}`)
-      lines.push(`  • Change:         ${s.pctChange > 0 ? '+' : ''}${s.pctChange}% over the period`)
-      if (s.peak)    lines.push(`  • Peak:           AED ${Number(s.peak).toLocaleString()} (${s.peakMonth})`)
-      if (s.txCount) lines.push(`  • Transactions in period: ${Number(s.txCount).toLocaleString()}`)
+    lines.push('\nMETRICS:')
+    lines.push(`• Total transactions: ${Number(stats.totalTransactions).toLocaleString()}`)
+    if (stats.avgMonthly) lines.push(`• Monthly average: ${Number(stats.avgMonthly).toLocaleString()} transactions`)
+    if (stats.peakMonth && stats.peakCount != null) {
+      lines.push(`• Peak month: ${stats.peakMonth} — ${Number(stats.peakCount).toLocaleString()} transactions`)
+    }
+    if (stats.rawSeries?.length) {
+      lines.push('\nRAW DATA (monthly counts):')
+      for (const pt of stats.rawSeries) {
+        lines.push(`  ${pt.label}: ${Number(pt.value).toLocaleString()} transactions`)
+      }
     }
     return lines.join('\n')
   }
 
-  // single-series (price_trend / rate_trend)
+  // ── multi-series ──────────────────────────────────────────────────────────
+  if (stats.series?.length > 1) {
+    lines.push('\nMETRICS:')
+    for (const s of stats.series) {
+      lines.push(`\nSeries: ${s.name}`)
+      if (s.latestValueFormatted) {
+        lines.push(`  • Latest value:   ${s.latestValueFormatted}${s.latestMonth ? ` (${s.latestMonth})` : ''}`)
+        lines.push(`  • Overall change: ${s.overallChangeFormatted} (${s.overallChangeAbsFormatted})`)
+        if (s.cagrFormatted)      lines.push(`  • CAGR:           ${s.cagrFormatted}`)
+        lines.push(`  • Peak:           ${s.peakValueFormatted}${s.peakMonth ? ` (${s.peakMonth})` : ''}`)
+        lines.push(`  • Trough:         ${s.troughValueFormatted}${s.troughMonth ? ` (${s.troughMonth})` : ''}`)
+      } else {
+        // legacy fallback
+        lines.push(`  • Starting value: AED ${Number(s.first).toLocaleString()}`)
+        lines.push(`  • Latest value:   AED ${Number(s.last).toLocaleString()}`)
+        lines.push(`  • Change:         ${s.pctChange > 0 ? '+' : ''}${s.pctChange}% over the period`)
+        if (s.peak) lines.push(`  • Peak:           AED ${Number(s.peak).toLocaleString()} (${s.peakMonth})`)
+      }
+      if (s.txCount) lines.push(`  • Transactions:   ${Number(s.txCount).toLocaleString()}`)
+    }
+    return lines.join('\n')
+  }
+
+  // ── single-series ─────────────────────────────────────────────────────────
   if (stats.series?.length === 1) {
     const s    = stats.series[0]
     const unit = queryType === 'rate_trend' ? 'AED/sqm' : 'AED'
-    lines.push(`• Starting value: ${unit} ${Number(s.first).toLocaleString()}`)
-    lines.push(`• Latest value:   ${unit} ${Number(s.last).toLocaleString()}`)
-    lines.push(`• Change:         ${s.pctChange > 0 ? '+' : ''}${s.pctChange}% over the period`)
-    if (s.peak)    lines.push(`• Peak:           ${unit} ${Number(s.peak).toLocaleString()} (${s.peakMonth})`)
-    if (s.txCount) lines.push(`• Total transactions in period: ${Number(s.txCount).toLocaleString()}`)
+    lines.push('\nMETRICS:')
+    if (s.latestValueFormatted) {
+      lines.push(`• Latest value:   ${s.latestValueFormatted}${s.latestMonth ? ` (${s.latestMonth})` : ''}`)
+      lines.push(`• Overall change: ${s.overallChangeFormatted} (${s.overallChangeAbsFormatted})`)
+      if (s.yoyChangeFormatted) lines.push(`• YoY change:     ${s.yoyChangeFormatted}`)
+      if (s.cagrFormatted)      lines.push(`• CAGR:           ${s.cagrFormatted}`)
+      lines.push(`• Peak:           ${s.peakValueFormatted}${s.peakMonth ? ` (${s.peakMonth})` : ''}`)
+      lines.push(`• Trough:         ${s.troughValueFormatted}${s.troughMonth ? ` (${s.troughMonth})` : ''}`)
+    } else {
+      // legacy fallback
+      lines.push(`• Starting value: ${unit} ${Number(s.first).toLocaleString()}`)
+      lines.push(`• Latest value:   ${unit} ${Number(s.last).toLocaleString()}`)
+      lines.push(`• Change:         ${s.pctChange > 0 ? '+' : ''}${s.pctChange}% over the period`)
+      if (s.peak) lines.push(`• Peak:           ${unit} ${Number(s.peak).toLocaleString()} (${s.peakMonth})`)
+    }
+    if (s.txCount) lines.push(`• Transactions:   ${Number(s.txCount).toLocaleString()}`)
+    if (stats.rawSeries?.length) {
+      lines.push(`\nRAW DATA (all ${stats.rawSeries.length} data points):`)
+      for (const pt of stats.rawSeries) {
+        lines.push(`  ${pt.label}: ${unit} ${Number(pt.value).toLocaleString()}`)
+      }
+    }
   }
 
-  if (stats.series !== undefined && stats.series.length === 0) {
-    lines.push('• No series data available.')
-  }
+  if (!stats.series?.length) lines.push('• No series data available.')
 
   return lines.join('\n')
 }
@@ -153,16 +202,17 @@ export default async function handler(req) {
   }
 
   const systemPrompt = mode === 'short' ? SHORT_PROMPT : FULL_PROMPT
-  const maxTokens    = mode === 'short' ? 80 : 600
+  const maxTokens    = mode === 'short' ? 80 : 1000
 
   const userMessage = `Original question: "${prompt}"
 
 Query type: ${intent.queryType}
+Adaptive format: ${intent.adaptiveFormat ?? 'trend'}
 Filters applied: ${JSON.stringify(intent.filters)}
 
 ${formatSummaryStats(summaryStats, intent.queryType)}
 
-Write the analyst commentary now.`
+Write the analyst JSON now.`
 
   const stream = anthropic.messages.stream({
     model: 'claude-opus-4-5',
