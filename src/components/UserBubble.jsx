@@ -12,8 +12,8 @@ export function UserBubble({ prompt, createdAt, author, userId }) {
   const showImg     = avatarUrl && !imgError
 
   return (
-    <div className="flex flex-row gap-3 items-start">
-      {/* Left — avatar */}
+    <div className="flex flex-row-reverse gap-3 items-start">
+      {/* Right — avatar */}
       <div className="shrink-0 h-8 w-8 rounded-full overflow-hidden bg-slate-200 dark:bg-slate-700 flex items-center justify-center">
         {showImg ? (
           <img
@@ -33,9 +33,9 @@ export function UserBubble({ prompt, createdAt, author, userId }) {
         )}
       </div>
 
-      {/* Right — name row + prompt bubble */}
-      <div className="flex flex-col gap-1 min-w-0">
-        <p className="flex items-center gap-1 text-xs text-slate-400">
+      {/* Left-of-avatar — name row + prompt bubble, right-anchored */}
+      <div className="flex flex-col gap-1 min-w-0 items-end">
+        <p className="flex flex-row-reverse gap-1 items-center text-xs text-slate-400">
           {userId && displayName && (
             <>
               <Link

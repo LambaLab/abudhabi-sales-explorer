@@ -48,7 +48,7 @@ describe('UserBubble', () => {
     expect(screen.getByText('NS')).toBeTruthy()
   })
 
-  it('avatar is in the outer row, bubble and name are together in the right column', () => {
+  it('outer container uses flex-row-reverse and inner content uses items-end', () => {
     const { container } = render(
       <UserBubble
         prompt="hello"
@@ -56,13 +56,22 @@ describe('UserBubble', () => {
         author={{ display_name: 'Nagi Salloum', avatar_url: '' }}
       />
     )
+    const outer = container.firstChild
+    expect(outer.className).toMatch(/flex-row-reverse/)
     const avatarCircle = container.querySelector('.rounded-full')
-    const bubble       = container.querySelector('.rounded-xl')
-    const timestamp    = container.querySelector('p')
-    // Facebook-style: avatar (left col) and bubble (right col) have DIFFERENT parents
+    const bubble = container.querySelector('.rounded-xl')
+    // In flex-row-reverse: avatar is right column, bubble is in left column
     expect(avatarCircle.parentElement).not.toBe(bubble.parentElement)
-    // Timestamp <p> is in the RIGHT column — same parent as the bubble
-    expect(timestamp.parentElement).toBe(bubble.parentElement)
+    // Inner content div has items-end for right-anchoring
+    expect(bubble.parentElement.className).toMatch(/items-end/)
+  })
+
+  it('timestamp paragraph uses flex-row-reverse', () => {
+    const { container } = render(
+      <UserBubble prompt="test" createdAt={Date.now()} />
+    )
+    const timestamp = container.querySelector('p')
+    expect(timestamp.className).toMatch(/flex-row-reverse/)
   })
 
   it('shows author name as a link to their profile when userId and display_name are provided', () => {
