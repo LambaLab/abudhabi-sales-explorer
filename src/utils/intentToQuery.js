@@ -122,7 +122,8 @@ export function computeSummaryStats(rows, intent) {
     const counts  = sorted.map(r => Number(r.tx_count))
     const total   = counts.reduce((a, b) => a + b, 0)
     const avg     = total / counts.length
-    const peak    = Math.max(...counts)
+    // C1: use reduce instead of Math.max spread to avoid RangeError on large datasets
+    const peak    = counts.reduce((a, b) => (b > a ? b : a), counts[0] ?? 0)
     const peakRow = sorted.find(r => Number(r.tx_count) === peak)
     return {
       totalTransactions: total,
@@ -158,8 +159,9 @@ export function computeSummaryStats(rows, intent) {
       const prices = sorted.map(p => p.price)
       const first  = prices[0]
       const last   = prices[prices.length - 1]
-      const peak   = Math.max(...prices)
-      const trough = Math.min(...prices)
+      // C1: use reduce instead of Math.max/min spread to avoid RangeError on large datasets
+      const peak   = prices.reduce((a, b) => (b > a ? b : a), prices[0] ?? 0)
+      const trough = prices.reduce((a, b) => (b < a ? b : a), prices[0] ?? 0)
       const peakPt   = sorted.find(p => p.price === peak)
       const troughPt = sorted.find(p => p.price === trough)
       const months   = sorted.length
@@ -183,7 +185,8 @@ export function computeSummaryStats(rows, intent) {
         peakValueFormatted:       fmtAED(peak),
         troughValueFormatted:     fmtAED(trough),
         overallChangeFormatted:   fmtPct(pctChange),
-        overallChangeAbsFormatted:(absChange >= 0 ? '+' : '') + fmtAED(Math.abs(absChange)),
+        // I3: use > 0 instead of >= 0 to avoid showing + sign when change is zero
+        overallChangeAbsFormatted:(absChange > 0 ? '+' : '') + fmtAED(Math.abs(absChange)),
         yoyChangeFormatted:       null,
         cagrFormatted:            cagr != null ? `${fmtPct(cagr)} CAGR` : null,
       }
@@ -192,7 +195,7 @@ export function computeSummaryStats(rows, intent) {
     const allSorted = [...rows].sort((a, b) => a.month.localeCompare(b.month))
     return {
       series,
-      rawSeries: [],
+      rawSeries: [], // per-series data is embedded in series[n]; rawSeries unused for comparisons
       dateRange: { from: allSorted[0]?.month, to: allSorted[allSorted.length - 1]?.month },
     }
   }
@@ -201,10 +204,17 @@ export function computeSummaryStats(rows, intent) {
   const valueKey = queryType === 'rate_trend' ? 'median_rate' : 'median_price'
   const sorted   = [...rows].sort((a, b) => a.month.localeCompare(b.month))
   const values   = sorted.map(r => Number(r[valueKey])).filter(v => v > 0)
+
+  // I1: guard against empty values array (all prices are 0 or null)
+  if (!values.length) {
+    return { series: [], rawSeries: [], dateRange: { from: sorted[0]?.month, to: sorted[sorted.length - 1]?.month } }
+  }
+
   const first    = values[0]
   const last     = values[values.length - 1]
-  const peak     = Math.max(...values)
-  const trough   = Math.min(...values)
+  // C1: use reduce instead of Math.max/min spread to avoid RangeError on large datasets
+  const peak     = values.length ? values.reduce((a, b) => (b > a ? b : a), values[0]) : 0
+  const trough   = values.length ? values.reduce((a, b) => (b < a ? b : a), values[0]) : 0
   const peakRow   = sorted.find(r => Number(r[valueKey]) === peak)
   const troughRow = sorted.find(r => Number(r[valueKey]) === trough)
   const months    = sorted.length
@@ -231,7 +241,8 @@ export function computeSummaryStats(rows, intent) {
       peakValueFormatted:       fmtAED(peak),
       troughValueFormatted:     fmtAED(trough),
       overallChangeFormatted:   fmtPct(pctChange),
-      overallChangeAbsFormatted:(absChange >= 0 ? '+' : '') + fmtAED(Math.abs(absChange)),
+      // I3: use > 0 instead of >= 0 to avoid showing + sign when change is zero
+      overallChangeAbsFormatted:(absChange > 0 ? '+' : '') + fmtAED(Math.abs(absChange)),
       yoyChangeFormatted:       yoyChange != null ? fmtPct(yoyChange) : null,
       cagrFormatted:            cagr != null ? `${fmtPct(cagr)} CAGR` : null,
     }],

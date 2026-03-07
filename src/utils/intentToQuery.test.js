@@ -271,3 +271,35 @@ describe('computeSummaryStats — enriched fields', () => {
     expect(alpha.overallChangeFormatted).toBeDefined()
   })
 })
+
+describe('computeSummaryStats — edge cases', () => {
+  it('handles empty values array gracefully (all prices are 0)', () => {
+    const rows = MONTHS_24.map(m => ({ month: m, median_price: 0, median_rate: 0, tx_count: 10 }))
+    const stats = computeSummaryStats(rows, { queryType: 'price_trend' })
+    expect(stats.series).toHaveLength(0)
+    expect(stats.rawSeries).toHaveLength(0)
+  })
+
+  it('handles single data point without NaN', () => {
+    const rows = [{ month: '2024-01', median_price: 1_500_000, median_rate: 10000, tx_count: 5 }]
+    const stats = computeSummaryStats(rows, { queryType: 'price_trend' })
+    expect(stats.series[0].latestValueFormatted).not.toContain('NaN')
+    expect(stats.series[0].overallChangeFormatted).not.toContain('NaN')
+    expect(stats.series[0].cagrFormatted).toBeNull() // < 12 months
+  })
+
+  it('overallChangeAbsFormatted does not show + sign when change is zero', () => {
+    const rows = MONTHS_24.map(m => ({ month: m, median_price: 1_000_000, median_rate: 8000, tx_count: 100 }))
+    const stats = computeSummaryStats(rows, { queryType: 'price_trend' })
+    expect(stats.series[0].overallChangeAbsFormatted).not.toMatch(/^\+/)
+  })
+
+  it('does not crash with large arrays (500 rows)', () => {
+    const months = Array.from({ length: 500 }, (_, i) => {
+      const d = new Date(1980, i, 1)
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+    })
+    const rows = months.map(m => ({ month: m, median_price: 1_000_000, median_rate: 8000, tx_count: 100 }))
+    expect(() => computeSummaryStats(rows, { queryType: 'price_trend' })).not.toThrow()
+  })
+})
