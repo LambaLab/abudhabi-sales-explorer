@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { Link }            from 'react-router-dom'
-import { DynamicChart }    from './charts/DynamicChart'
-import { DateRangePickerPopover } from './DateRangePickerPopover'
+import { AnalysisBlock }   from './AnalysisBlock'
+import { ChartSwitcher }   from './ChartSwitcher'
 import { ReplyCard }       from './ReplyCard'
 import { buildShareUrl }   from '../utils/deeplink'
 import { stripHint }       from '../utils/stripHint'
@@ -136,7 +136,6 @@ function AuthorAvatar({ avatarUrl, displayName, imgError, onError }) {
 
 export function PostCard({ post, onReply, isActive, onCancel, onDeepAnalysis, chartType = 'bar', onDelete, currentUser, user, onSignIn }) {
   const [copied, setCopied] = useState(false)
-  const [dateRange, setDateRange] = useState({ dateFrom: '', dateTo: '' })
   const [showSignIn, setShowSignIn] = useState(false)
   const [authorImgError, setAuthorImgError] = useState(false)
   const [unseenCount, setUnseenCount] = useState(0)
@@ -192,20 +191,6 @@ export function PostCard({ post, onReply, isActive, onCancel, onDeepAnalysis, ch
   const isStreaming   = post.status === 'explaining'
   const isDone        = post.status === 'done'
   const isError       = post.status === 'error'
-
-  // Filter chartData by local dateRange selection (client-side, no re-query)
-  const filteredChartData = (() => {
-    const data = post.chartData
-    if (!data?.length) return data
-    const { dateFrom, dateTo } = dateRange
-    if (!dateFrom && !dateTo) return data
-    return data.filter(row => {
-      const m = row.month ?? ''
-      if (dateFrom && m < dateFrom) return false
-      if (dateTo   && m > dateTo)   return false
-      return true
-    })
-  })()
 
   // A reply is "in flight" if any reply does not have status 'done' or 'error'
   const hasActiveReply = post.replies?.some(
@@ -335,9 +320,10 @@ export function PostCard({ post, onReply, isActive, onCancel, onDeepAnalysis, ch
         <>
           {post.analysisText ? (
             <>
-              <div className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-wrap">
-                {post.isExpanded && post.fullText ? post.fullText : post.analysisText}
-              </div>
+              <AnalysisBlock
+                text={post.isExpanded && post.fullText ? post.fullText : post.analysisText}
+                adaptiveFormat={post.intent?.adaptiveFormat}
+              />
 
               {/* Deeper analysis link */}
               {(isDone || post.status === 'deepening') && onDeepAnalysis && (
@@ -375,19 +361,7 @@ export function PostCard({ post, onReply, isActive, onCancel, onDeepAnalysis, ch
             !isStreaming && <p className="text-sm text-slate-500 italic">No analysis available.</p>
           )}
 
-          {post.chartData?.length > 0 && (
-            <div className="mt-2 space-y-2">
-              <div className="flex justify-end">
-                <DateRangePickerPopover value={dateRange} onChange={setDateRange} align="right" />
-              </div>
-              <DynamicChart
-                intent={post.intent}
-                chartData={filteredChartData}
-                chartKeys={post.chartKeys}
-                chartType={chartType}
-              />
-            </div>
-          )}
+          <ChartSwitcher post={post} />
         </>
       )}
 
